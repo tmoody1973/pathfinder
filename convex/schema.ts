@@ -69,8 +69,8 @@ export default defineSchema({
 
   modules: defineTable({
     pathId: v.id("paths"),
-    moduleNumber: v.number(),            // 1..N within the path's outline
-    isFeatured: v.boolean(),             // true for the primary-bridge module auto-generated on path creation
+    moduleNumber: v.optional(v.number()),  // 1..N within the path's outline. Optional for backward-compat with rows from before this field existed.
+    isFeatured: v.optional(v.boolean()),   // true for the primary-bridge module auto-generated on path creation
     title: v.optional(v.string()),       // mirrors pathOutline module title for fast lookup
     careerDiff: v.any(),                 // SkillDiffResult, may be specialized to this module's bridge
     lesson: v.optional(v.any()),

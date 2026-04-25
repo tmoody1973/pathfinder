@@ -81,16 +81,23 @@ export const getFeaturedInternal = internalQuery({
 });
 
 /** List all generated modules for a path, ordered by moduleNumber. UI uses
- *  this to show which modules in the outline have content vs. locked. */
+ *  this to show which modules in the outline have content vs. locked.
+ *  Legacy rows without moduleNumber are treated as the featured module #1. */
 export const listForPath = query({
   args: { pathId: v.id("paths") },
-  handler: async (ctx, { pathId }): Promise<Array<{ moduleNumber: number; isFeatured: boolean }>> => {
+  handler: async (
+    ctx,
+    { pathId },
+  ): Promise<Array<{ moduleNumber: number; isFeatured: boolean }>> => {
     const rows = await ctx.db
       .query("modules")
       .withIndex("by_path", (q) => q.eq("pathId", pathId))
       .collect();
     return rows
-      .map((r) => ({ moduleNumber: r.moduleNumber, isFeatured: r.isFeatured }))
+      .map((r) => ({
+        moduleNumber: r.moduleNumber ?? 1,
+        isFeatured: r.isFeatured ?? true,
+      }))
       .sort((a, b) => a.moduleNumber - b.moduleNumber);
   },
 });
