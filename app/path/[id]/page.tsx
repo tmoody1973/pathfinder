@@ -25,6 +25,7 @@ const AGENT_LABELS: Record<string, string> = {
   course: "Courses · Haiku 4.5",
   community: "Community · Haiku 4.5",
   books: "Books · Haiku + Google Books",
+  news: "News · Sonar (live web)",
   audio: "Audio · Haiku + ElevenLabs",
 };
 
@@ -228,6 +229,7 @@ function ModuleTabs({
           <TabsTrigger>Videos</TabsTrigger>
           <TabsTrigger>Courses</TabsTrigger>
           <TabsTrigger>Books</TabsTrigger>
+          <TabsTrigger>News</TabsTrigger>
           <TabsTrigger>
             Quiz
             {quizSubmitted && (
@@ -257,6 +259,11 @@ function ModuleTabs({
           {/* BOOKS */}
           <TabsContent>
             <BooksTab books={moduleDoc.books} />
+          </TabsContent>
+
+          {/* NEWS */}
+          <TabsContent>
+            <NewsTab news={moduleDoc.news} />
           </TabsContent>
 
           {/* QUIZ */}
@@ -632,6 +639,74 @@ function BooksTab({ books }: { books: any }) {
               )}
             </div>
           </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+const NEWS_TAG_STYLES: Record<string, string> = {
+  "Industry Growth": "bg-emerald-100 border-emerald-500",
+  Technology: "bg-primary/30 border-black",
+  "Job Market": "bg-accent border-black",
+  Policy: "bg-muted border-black",
+  Culture: "bg-primary/20 border-black",
+};
+
+function NewsTab({ news }: { news: any }) {
+  if (!news || !news.items || news.items.length === 0) {
+    return (
+      <Text as="p" className="text-muted-foreground">
+        No recent news yet — either still generating, or Sonar didn&apos;t find items
+        from the last 30 days. PERPLEXITY_API_KEY may not be set in Convex env.
+      </Text>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      <Text as="p" className="text-sm text-muted-foreground mb-2">
+        Current industry news from the last 30 days — fetched live by Perplexity Sonar,
+        with real source URLs.
+      </Text>
+      {news.items.map((item: any, i: number) => (
+        <a
+          key={i}
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block border-2 border-black rounded p-4 bg-card hover:bg-accent transition-colors"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <Text as="p" className="font-head text-base leading-snug">
+                {item.title}
+              </Text>
+              <Text as="p" className="text-xs text-muted-foreground mt-1">
+                {item.source}
+                {item.date ? ` · ${item.date}` : ""}
+              </Text>
+            </div>
+            <span
+              className={`text-xs font-head uppercase tracking-widest px-2 py-1 rounded border-2 whitespace-nowrap ${NEWS_TAG_STYLES[item.tag] ?? NEWS_TAG_STYLES["Industry Growth"]}`}
+            >
+              {item.tag}
+            </span>
+          </div>
+          {item.summary && (
+            <Text as="p" className="mt-3 text-sm leading-relaxed">
+              {item.summary}
+            </Text>
+          )}
+          {item.whyItMatters && (
+            <div className="mt-3 border-2 border-black rounded bg-primary/20 p-3">
+              <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">
+                Why this matters for you
+              </Text>
+              <Text as="p" className="text-sm">
+                {item.whyItMatters}
+              </Text>
+            </div>
+          )}
         </a>
       ))}
     </div>

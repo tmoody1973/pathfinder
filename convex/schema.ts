@@ -51,6 +51,7 @@ export default defineSchema({
       v.literal("course"),
       v.literal("community"),
       v.literal("books"),
+      v.literal("news"),
     ),
     status: v.union(
       v.literal("pending"),
@@ -76,6 +77,7 @@ export default defineSchema({
     course: v.optional(v.any()),         // CourseResult: { moocs, source, socCode }
     community: v.optional(v.any()),      // CommunityResult: { communities, people, newsletters, source, socCode }
     books: v.optional(v.any()),          // BooksResult: { queries, books: [...] }
+    news: v.optional(v.any()),           // NewsResult: { items, citations }
     cached: v.boolean(),
     createdAt: v.number(),
   }).index("by_path", ["pathId"]),

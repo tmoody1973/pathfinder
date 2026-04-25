@@ -17,6 +17,7 @@ const agentLiteral = v.union(
   v.literal("course"),
   v.literal("community"),
   v.literal("books"),
+  v.literal("news"),
 );
 
 const statusLiteral = v.union(

@@ -12,6 +12,7 @@ import { runAssessmentAgent } from "./agents/assessment";
 import { runCourseAgent } from "./agents/course";
 import { runCommunityAgent } from "./agents/community";
 import { runBooksAgent } from "./agents/books";
+import { runNewsAgent } from "./agents/news";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -73,6 +74,10 @@ export const run = internalAction({
       pathId,
       agent: "books",
     });
+    const newsRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "news",
+    });
 
     let skillDiff: SkillDiffResult;
 
@@ -113,7 +118,7 @@ export const run = internalAction({
       }).catch(() => {});
 
       // skillDiff is the gate. Mark all downstream agents as skipped, fail the path.
-      for (const id of [lessonRunId, resourceRunId, assessmentRunId, courseRunId, communityRunId, booksRunId]) {
+      for (const id of [lessonRunId, resourceRunId, assessmentRunId, courseRunId, communityRunId, booksRunId, newsRunId]) {
         await ctx.runMutation(internal.agentRuns.markError, {
           runId: id,
           errorMessage: "Skipped — skill-diff gate failed",
@@ -165,16 +170,30 @@ export const run = internalAction({
       "books",
       () => withTimeout(runBooksAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "books"),
     );
+    const newsPromise = runAgentSettled(
+      ctx,
+      newsRunId,
+      "news",
+      () => withTimeout(runNewsAgent(skillDiff), AGENT_TIMEOUT_MS, "news"),
+    );
 
-    const [lessonResult, resourceResult, assessmentResult, courseResult, communityResult, booksResult] =
-      await Promise.all([
-        lessonPromise,
-        resourcePromise,
-        assessmentPromise,
-        coursePromise,
-        communityPromise,
-        booksPromise,
-      ]);
+    const [
+      lessonResult,
+      resourceResult,
+      assessmentResult,
+      courseResult,
+      communityResult,
+      booksResult,
+      newsResult,
+    ] = await Promise.all([
+      lessonPromise,
+      resourcePromise,
+      assessmentPromise,
+      coursePromise,
+      communityPromise,
+      booksPromise,
+      newsPromise,
+    ]);
 
     // === Phase 3: Aggregate into modules row ===
     try {
@@ -188,6 +207,7 @@ export const run = internalAction({
         course: courseResult ?? undefined,
         community: communityResult ?? undefined,
         books: booksResult ?? undefined,
+        news: newsResult ?? undefined,
         cached: false,
       });
     } catch (err) {
