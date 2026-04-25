@@ -1,8 +1,15 @@
 /**
- * Google Books API wrapper — zero auth, zero API key, zero cost.
+ * Google Books API wrapper.
  *
  * Endpoint: https://www.googleapis.com/books/v1/volumes
- * Rate limit (no key): 1000 requests/day per IP. Plenty for a hackathon demo.
+ * Rate limit:
+ *   - Without API key: 1,000 requests/day per IP (easy to hit during heavy
+ *     hackathon testing — the Convex backend's outbound IP gets shared across
+ *     all your path generations).
+ *   - With API key (GOOGLE_BOOKS_API_KEY env var): 100,000 requests/day default
+ *     on the free tier. Get a key: https://console.cloud.google.com/apis/credentials
+ *     Enable Books API in Cloud Console first, then create an API key. Set
+ *     via: bunx convex env set GOOGLE_BOOKS_API_KEY <key>
  *
  * Docs: https://developers.google.com/books/docs/v1/using
  */
@@ -37,10 +44,21 @@ export async function searchBooks(
   url.searchParams.set("maxResults", String(Math.min(maxResults, 40)));
   url.searchParams.set("printType", "books");
   url.searchParams.set("orderBy", "relevance");
+  // Use API key when available — bumps free quota from 1K/day to 100K/day
+  const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
+  if (apiKey) url.searchParams.set("key", apiKey);
 
   const res = await fetch(url.toString());
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    // 429 = quota exceeded. Don't throw — return empty so the path still
+    // renders (books tab shows the "no books" state, other tabs unaffected).
+    if (res.status === 429) {
+      console.warn(
+        `[googleBooks] quota exceeded for query "${query.slice(0, 80)}". Set GOOGLE_BOOKS_API_KEY in Convex env to lift the limit.`,
+      );
+      return [];
+    }
     throw new Error(`Google Books search failed: ${res.status} ${body.slice(0, 200)}`);
   }
   const data = await res.json();
