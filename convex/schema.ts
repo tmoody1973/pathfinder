@@ -27,6 +27,7 @@ export default defineSchema({
     targetCareer: v.string(),
     targetONET: v.string(),
     targetReasoning: v.optional(v.string()),
+    hoursPerWeek: v.optional(v.number()),  // user-stated time availability — re-paces the path
     status: v.union(
       v.literal("pending"),
       v.literal("diffing"),

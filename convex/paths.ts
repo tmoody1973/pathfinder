@@ -22,6 +22,7 @@ export const createPath = mutation({
     anonymousId: v.string(),
     currentCareer: v.string(),
     targetCareer: v.string(),
+    hoursPerWeek: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Id<"paths">> => {
     const currentTrim = args.currentCareer.trim();
@@ -57,6 +58,13 @@ export const createPath = mutation({
       });
     }
 
+    // Clamp hours/week to a sensible range. Below 1 isn't useful; above 40 is
+    // basically a full-time student and the path doesn't need re-pacing for that.
+    const hoursPerWeek =
+      typeof args.hoursPerWeek === "number" && Number.isFinite(args.hoursPerWeek)
+        ? Math.max(1, Math.min(40, Math.round(args.hoursPerWeek)))
+        : undefined;
+
     const now = Date.now();
     const pathId = await ctx.db.insert("paths", {
       sessionId: session._id,
@@ -65,6 +73,7 @@ export const createPath = mutation({
       targetCareer: targetTrim,
       targetONET: "",
       status: "pending",
+      hoursPerWeek,
       createdAt: now,
     });
 

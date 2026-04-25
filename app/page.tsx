@@ -17,6 +17,7 @@ export default function Home() {
   const createPath = useMutation(api.paths.createPath);
   const [currentCareer, setCurrentCareer] = useState("");
   const [targetCareer, setTargetCareer] = useState("");
+  const [hoursPerWeek, setHoursPerWeek] = useState("5");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,10 +27,12 @@ export default function Home() {
     setSubmitting(true);
     try {
       const anonymousId = getAnonymousId();
+      const hours = parseInt(hoursPerWeek, 10);
       const pathId = await createPath({
         anonymousId,
         currentCareer: currentCareer.trim(),
         targetCareer: targetCareer.trim(),
+        hoursPerWeek: Number.isFinite(hours) && hours > 0 ? hours : undefined,
       });
       router.push(`/path/${pathId}`);
     } catch (err) {
@@ -88,6 +91,28 @@ export default function Home() {
                 disabled={submitting}
                 className="mt-1.5"
               />
+            </div>
+
+            <div>
+              <Label htmlFor="hours">
+                Hours per week you can dedicate
+              </Label>
+              <div className="mt-1.5 flex items-center gap-3">
+                <Input
+                  id="hours"
+                  type="number"
+                  min="1"
+                  max="40"
+                  step="1"
+                  value={hoursPerWeek}
+                  onChange={(e) => setHoursPerWeek(e.target.value)}
+                  disabled={submitting}
+                  className="w-24"
+                />
+                <Text as="p" className="text-sm text-muted-foreground">
+                  We&apos;ll re-pace the path. 5h/week ≠ 12h/week.
+                </Text>
+              </div>
             </div>
 
             {error && (

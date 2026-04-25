@@ -184,6 +184,7 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
         {path.pathOutline && (
           <PathOutlineView
             outline={path.pathOutline}
+            hoursPerWeek={path.hoursPerWeek}
             generatedNumbers={new Set((generatedList ?? []).map((m) => m.moduleNumber))}
             activeNumber={activeModuleNumber}
             onModuleClick={onModuleClick}
@@ -232,15 +233,30 @@ const PHASE_COLORS: Record<number, string> = {
 
 function PathOutlineView({
   outline,
+  hoursPerWeek,
   generatedNumbers,
   activeNumber,
   onModuleClick,
 }: {
   outline: any;
+  hoursPerWeek?: number;
   generatedNumbers: Set<number>;
   activeNumber: number;
   onModuleClick: (n: number, isGenerated: boolean) => void;
 }) {
+  // Re-pace the path based on the user's stated weekly availability. Default
+  // path is sized at outline.totalWeeks; if the learner has fewer hours/week,
+  // honest math says it'll take longer.
+  const totalHours = outline.totalHours ?? 30;
+  const totalModules = (outline.phases ?? []).reduce(
+    (acc: number, p: any) => acc + (p.modules?.length ?? 0),
+    0,
+  );
+  const repacedWeeks =
+    hoursPerWeek && hoursPerWeek > 0 ? Math.ceil(totalHours / hoursPerWeek) : null;
+  const repacedMonths =
+    repacedWeeks !== null ? Math.round((repacedWeeks / 4.33) * 10) / 10 : null;
+
   return (
     <div className="mt-8">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
@@ -248,11 +264,34 @@ function PathOutlineView({
           Your full learning path · click any module to open or generate
         </Text>
         <Text as="p" className="text-xs text-muted-foreground">
-          {outline.totalWeeks ?? 8} weeks · {outline.totalHours ?? 30}h ·{" "}
-          {(outline.phases ?? []).reduce((acc: number, p: any) => acc + (p.modules?.length ?? 0), 0)}{" "}
-          modules · {generatedNumbers.size} generated
+          {totalHours}h · {totalModules} modules · {generatedNumbers.size} generated
         </Text>
       </div>
+
+      {/* Re-paced timeline strip: honest math based on the user's stated availability */}
+      {hoursPerWeek && repacedWeeks !== null && (
+        <div className="mt-3 border-2 border-black rounded bg-primary/20 p-3 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <Text as="p" className="text-xs uppercase tracking-widest font-head mb-0.5">
+              Your realistic timeline
+            </Text>
+            <Text as="p" className="text-sm">
+              At <span className="font-head">{hoursPerWeek}h/week</span>,
+              this {totalHours}h path takes{" "}
+              <span className="font-head">{repacedWeeks} weeks</span>
+              {repacedMonths !== null && (
+                <span className="text-muted-foreground">
+                  {" "}(~{repacedMonths} months)
+                </span>
+              )}
+              .
+            </Text>
+          </div>
+          <Text as="p" className="text-xs text-muted-foreground">
+            Default suggested pace: {outline.totalWeeks ?? 8} weeks
+          </Text>
+        </div>
+      )}
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
         {(outline.phases ?? []).map((phase: any) => (
           <div
