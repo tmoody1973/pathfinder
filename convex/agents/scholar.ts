@@ -1,5 +1,5 @@
 /**
- * Scholar Agent — SerpAPI Google Scholar.
+ * Scholar Agent — SerpAPI Google Scholar (official SDK).
  *
  * Pulls peer-reviewed papers relevant to the target career so the "About this
  * career" tab includes academic grounding. For research-adjacent careers (UX,
@@ -11,13 +11,15 @@
  *   1. Compose a tight scholar query from the target career name + bridge
  *      topic. We anchor on the literal career phrase so we don't drown in
  *      adjacent fields.
- *   2. Call SerpAPI's google_scholar engine.
+ *   2. Call SerpAPI's google_scholar engine via the official `serpapi` SDK.
  *   3. Filter: drop entries with no citation count or fewer than 5 citations
  *      (Scholar's long tail is a junk yard). Keep top 5.
  *   4. Return shape that the UI can render straight to a list.
  *
  * Cost: SerpAPI is ~$0.01/search. One call per path. Trivial.
  */
+
+import { getJson } from "serpapi";
 
 export interface ScholarPaper {
   title: string;
@@ -96,25 +98,16 @@ export async function runScholarAgent(args: {
   }
 
   const query = buildQuery(args.targetCareer, args.bridgeTopic);
-  const url = new URL("https://serpapi.com/search.json");
-  url.searchParams.set("engine", "google_scholar");
-  url.searchParams.set("q", query);
-  url.searchParams.set("api_key", apiKey);
-  url.searchParams.set("num", "20");
-  // hl=en for English results, scisbd=0 for relevance sort (default)
-  url.searchParams.set("hl", "en");
 
   try {
-    const response = await fetch(url.toString());
-    if (!response.ok) {
-      const body = await response.text().catch(() => "");
-      console.error(
-        `[scholar] SerpAPI error ${response.status}: ${body.slice(0, 200)}`,
-      );
-      return { query, papers: [], available: false };
-    }
+    const data = (await getJson({
+      engine: "google_scholar",
+      q: query,
+      hl: "en",
+      num: 20,
+      api_key: apiKey,
+    })) as SerpApiScholarResponse;
 
-    const data = (await response.json()) as SerpApiScholarResponse;
     if (data.error) {
       console.error("[scholar] SerpAPI returned error:", data.error);
       return { query, papers: [], available: false };

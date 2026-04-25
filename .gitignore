@@ -58,3 +58,4 @@ db_*_text/
 !.yarn/versions
 *.tsbuildinfo
 next-env.d.ts
+.vercel
