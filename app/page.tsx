@@ -204,11 +204,12 @@ export default function Home() {
             breakpoints) so the logo scales but stays subordinate to the H1. */}
         <div className="mb-6 flex items-end gap-4 flex-wrap">
           <Image
-            src="/pathfinder-logo.png"
+            src="/pathfinder-logo.svg"
             alt="PathFinder"
             width={1200}
             height={432}
             priority
+            unoptimized
             className="h-14 md:h-16 lg:h-20 w-auto"
           />
           <Text
@@ -665,10 +666,11 @@ export default function Home() {
           tagline down here. Same brand mark, smaller treatment. */}
       <footer className="mt-24 w-full max-w-5xl flex flex-col md:flex-row items-center md:items-end justify-between gap-4 pb-2">
         <Image
-          src="/pathfinder-logo.png"
+          src="/pathfinder-logo.svg"
           alt="PathFinder"
           width={1200}
           height={432}
+          unoptimized
           className="h-8 md:h-10 w-auto"
         />
         <Text as="p" className="text-sm text-muted-foreground text-center md:text-right">

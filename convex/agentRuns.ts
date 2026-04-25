@@ -20,6 +20,7 @@ const agentLiteral = v.union(
   v.literal("news"),
   v.literal("salary"),
   v.literal("description"),
+  v.literal("scholar"),
 );
 
 const statusLiteral = v.union(

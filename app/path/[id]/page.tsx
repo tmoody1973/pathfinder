@@ -29,6 +29,7 @@ const AGENT_LABELS: Record<string, string> = {
   books: "Books · Haiku + Google Books",
   news: "News · Sonar (live web)",
   description: "About this career · Sonnet 4.6",
+  scholar: "Scholar · SerpAPI",
   audio: "Audio · Haiku + ElevenLabs",
 };
 
@@ -1335,11 +1336,12 @@ function ModuleTabs({
             <BooksTab books={moduleDoc.books} />
           </TabsContent>
 
-          {/* ABOUT THIS CAREER — description (primary) + news (absorbed) + scholar slot */}
+          {/* ABOUT THIS CAREER — description (primary) + news (absorbed) + scholarly research */}
           <TabsContent>
             <AboutTab
               description={featuredDoc?.description ?? moduleDoc.description}
               news={featuredDoc?.news ?? moduleDoc.news}
+              scholar={featuredDoc?.scholar ?? moduleDoc.scholar}
               targetCareer={targetCareer}
             />
           </TabsContent>
@@ -1921,10 +1923,12 @@ const NEWS_TAG_STYLES: Record<string, string> = {
 function AboutTab({
   description,
   news,
+  scholar,
   targetCareer,
 }: {
   description: any;
   news: any;
+  scholar: any;
   targetCareer: string;
 }) {
   if (!description) {
@@ -2228,16 +2232,65 @@ function AboutTab({
         </section>
       )}
 
-      {/* Scholarly research — slot reserved for Semantic Scholar in v2 */}
-      <section className="border-2 border-dashed border-black/40 rounded p-4 bg-card/40">
-        <Text as="p" className="text-xs font-head uppercase tracking-widest text-muted-foreground mb-1">
-          Scholarly research
-        </Text>
-        <Text as="p" className="text-sm text-foreground/70">
-          Coming soon: peer-reviewed papers and citations from Semantic Scholar,
-          filtered for relevance to {targetCareer}.
-        </Text>
-      </section>
+      {/* Scholarly research — Google Scholar via SerpAPI. Hides entirely if
+          the target career has thin academic literature (trades, creative
+          fields). When papers exist, shows the top 5 by citation count. */}
+      {scholar?.available && scholar.papers?.length > 0 && (
+        <section>
+          <div className="flex items-baseline justify-between gap-3 mb-3">
+            <Text as="h3" className="text-xl">
+              Scholarly research
+            </Text>
+            <Text as="p" className="text-xs text-muted-foreground">
+              Top {scholar.papers.length} from Google Scholar · ranked by citations
+            </Text>
+          </div>
+          <div className="space-y-3">
+            {scholar.papers.map((p: any, i: number) => (
+              <a
+                key={i}
+                href={p.pdfLink || p.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border-2 border-black rounded p-4 bg-card hover:bg-accent transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <Text as="p" className="font-head text-base leading-snug flex-1 min-w-0">
+                    {p.title}
+                  </Text>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {typeof p.citationCount === "number" && p.citationCount > 0 && (
+                      <Badge size="sm" variant="surface">
+                        {p.citationCount.toLocaleString()} cites
+                      </Badge>
+                    )}
+                    {p.year && (
+                      <Badge size="sm" variant="default">
+                        {p.year}
+                      </Badge>
+                    )}
+                    {p.pdfLink && (
+                      <Badge size="sm" variant="outline">
+                        PDF
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {p.authors && (
+                  <Text as="p" className="text-sm text-muted-foreground mt-1">
+                    {p.authors}
+                  </Text>
+                )}
+                {p.snippet && (
+                  <Text as="p" className="mt-2 text-sm text-foreground/80 leading-relaxed line-clamp-3">
+                    {p.snippet}
+                  </Text>
+                )}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

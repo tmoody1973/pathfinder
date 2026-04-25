@@ -20,6 +20,7 @@ import type * as agents_news from "../agents/news.js";
 import type * as agents_pureSkillDiff from "../agents/pureSkillDiff.js";
 import type * as agents_resource from "../agents/resource.js";
 import type * as agents_salary from "../agents/salary.js";
+import type * as agents_scholar from "../agents/scholar.js";
 import type * as agents_skillDiff from "../agents/skillDiff.js";
 import type * as agents_targetResolver from "../agents/targetResolver.js";
 import type * as counselor from "../counselor.js";
@@ -56,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   "agents/pureSkillDiff": typeof agents_pureSkillDiff;
   "agents/resource": typeof agents_resource;
   "agents/salary": typeof agents_salary;
+  "agents/scholar": typeof agents_scholar;
   "agents/skillDiff": typeof agents_skillDiff;
   "agents/targetResolver": typeof agents_targetResolver;
   counselor: typeof counselor;

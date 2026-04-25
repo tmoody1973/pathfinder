@@ -27,6 +27,7 @@ export const insert = internalMutation({
     news: v.optional(v.any()),
     salary: v.optional(v.any()),
     description: v.optional(v.any()),
+    scholar: v.optional(v.any()),
     cached: v.boolean(),
   },
   handler: async (ctx, args): Promise<Id<"modules">> => {

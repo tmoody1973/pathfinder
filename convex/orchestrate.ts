@@ -19,6 +19,7 @@ import { runBooksAgent } from "./agents/books";
 import { runNewsAgent } from "./agents/news";
 import { runSalaryAgent } from "./agents/salary";
 import { runDescriptionAgent } from "./agents/description";
+import { runScholarAgent } from "./agents/scholar";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -101,6 +102,10 @@ export const run = internalAction({
     const descriptionRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
       pathId,
       agent: "description",
+    });
+    const scholarRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "scholar",
     });
 
     const path = await ctx.runQuery(internal.paths.getInternal, { pathId });
@@ -233,6 +238,20 @@ export const run = internalAction({
       "description",
       () => withTimeout(runDescriptionAgent(anthropic, skillDiff), DESCRIPTION_TIMEOUT_MS, "description"),
     );
+    const scholarPromise = runAgentSettled(
+      ctx,
+      scholarRunId,
+      "scholar",
+      () =>
+        withTimeout(
+          runScholarAgent({
+            targetCareer: path.targetCareer,
+            bridgeTopic: skillDiff.headline?.primaryBridge?.name,
+          }),
+          AGENT_TIMEOUT_MS,
+          "scholar",
+        ),
+    );
 
     const [
       lessonResult,
@@ -244,6 +263,7 @@ export const run = internalAction({
       newsResult,
       salaryResult,
       descriptionResult,
+      scholarResult,
     ] = await Promise.all([
       lessonPromise,
       resourcePromise,
@@ -254,6 +274,7 @@ export const run = internalAction({
       newsPromise,
       salaryPromise,
       descriptionPromise,
+      scholarPromise,
     ]);
 
     // === Phase 3: Aggregate into modules row ===
@@ -281,6 +302,7 @@ export const run = internalAction({
         news: newsResult ?? undefined,
         salary: salaryResult ?? undefined,
         description: descriptionResult ?? undefined,
+        scholar: scholarResult ?? undefined,
         cached: false,
       });
     } catch (err) {

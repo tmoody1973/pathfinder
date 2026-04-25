@@ -1,6 +1,9 @@
 <div align="center">
 
-<img src="public/pathfinder-logo.png" alt="PathFinder" width="600" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="public/pathfinder-logo-dark.svg">
+  <img alt="PathFinder" src="public/pathfinder-logo.svg" width="600">
+</picture>
 
 ### From where you are. To where you actually want to go.
 

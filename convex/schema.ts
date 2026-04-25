@@ -67,6 +67,7 @@ export default defineSchema({
       v.literal("news"),
       v.literal("salary"),
       v.literal("description"),
+      v.literal("scholar"),
     ),
     status: v.union(
       v.literal("pending"),
@@ -110,6 +111,7 @@ export default defineSchema({
     news: v.optional(v.any()),
     salary: v.optional(v.any()),
     description: v.optional(v.any()),
+    scholar: v.optional(v.any()),
     cached: v.boolean(),
     createdAt: v.number(),
   })
