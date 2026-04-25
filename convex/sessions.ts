@@ -9,7 +9,10 @@ import type { Doc, Id } from "./_generated/dataModel";
  */
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
-const MAX_GENERATIONS_PER_HOUR = 3;
+// Configurable via Convex env var RATE_LIMIT_PER_HOUR. Dev default is 10 so
+// iteration doesn't get blocked; for the public demo deploy set it to 3 via
+// `bunx convex env set RATE_LIMIT_PER_HOUR 3 --prod`.
+const MAX_GENERATIONS_PER_HOUR = Number(process.env.RATE_LIMIT_PER_HOUR ?? "10");
 
 /** Public query: read a session by its anonymousId, or null if it hasn't been created yet. */
 export const getByAnonymousId = query({
@@ -74,3 +77,23 @@ export const RATE_LIMIT = {
   windowMs: ONE_HOUR_MS,
   maxPerWindow: MAX_GENERATIONS_PER_HOUR,
 } as const;
+
+/** Dev-friendly escape hatch: clear the rate limit state for the caller's session.
+ *  Safe to expose publicly because it only resets the session identified by the
+ *  anonymousId the caller controls — no cross-session mutation. Doesn't grant
+ *  anyone more API budget than the server was already prepared to give. */
+export const resetMyRateLimit = mutation({
+  args: { anonymousId: v.string() },
+  handler: async (ctx, { anonymousId }) => {
+    const existing = await ctx.db
+      .query("sessions")
+      .withIndex("by_anonymous", (q) => q.eq("anonymousId", anonymousId))
+      .unique();
+    if (!existing) return { reset: false, reason: "no session" };
+    await ctx.db.patch(existing._id, {
+      generationTimestamps: [],
+      inFlightPathId: undefined,
+    });
+    return { reset: true };
+  },
+});
