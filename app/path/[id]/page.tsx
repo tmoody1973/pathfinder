@@ -28,7 +28,7 @@ const AGENT_LABELS: Record<string, string> = {
   community: "Community · Haiku 4.5",
   books: "Books · Haiku + Google Books",
   news: "News · Sonar (live web)",
-  description: "About this career · Sonnet 4.6",
+  description: "About this career · Haiku 4.5",
   scholar: "Scholar · SerpAPI",
   audio: "Audio · Haiku + ElevenLabs",
 };
@@ -634,6 +634,48 @@ function formatSalary(n?: number): string {
   return `$${Math.round(n / 1000)}K`;
 }
 
+/**
+ * Extract a midpoint from a salary range string. Sonar sometimes returns a
+ * clean range ("$105K - $145K") but a broken/null median, leaving the panel
+ * to render "$0K" literally. This parser pulls the two boundary numbers and
+ * returns their midpoint so the UI has a sensible fallback.
+ *
+ * Handles formats: "$105K - $145K", "$105,000 - $145,000", "105k-145k",
+ * "$105K to $145K", and a few variations. Returns null if it can't parse 2
+ * numbers — caller should fall back to "—" in that case.
+ */
+function parseRangeMidpoint(range?: string): number | null {
+  if (!range) return null;
+  const matches = range.match(/\$?\s*([\d,]+(?:\.\d+)?)\s*([kKmM]?)/g);
+  if (!matches || matches.length < 2) return null;
+
+  const numbers: number[] = [];
+  for (const m of matches.slice(0, 2)) {
+    const cleaned = m.replace(/[$\s,]/g, "");
+    const isK = /[kK]$/.test(cleaned);
+    const isM = /[mM]$/.test(cleaned);
+    const n = parseFloat(cleaned.replace(/[kKmM]$/, ""));
+    if (!Number.isFinite(n)) return null;
+    numbers.push(isM ? n * 1_000_000 : isK ? n * 1000 : n);
+  }
+  if (numbers.length !== 2) return null;
+  // Sanity: range should be sensible salaries (10K-10M)
+  if (numbers[0] < 10_000 || numbers[1] < 10_000) return null;
+  if (numbers[0] > 10_000_000 || numbers[1] > 10_000_000) return null;
+  return Math.round((numbers[0] + numbers[1]) / 2);
+}
+
+/**
+ * The Sonar agent occasionally stores a tiny artifact value in medianAnnual
+ * (e.g., 100, 500) when its parsing fails on a particular career. Treat any
+ * value below 10K as effectively missing and prefer the range midpoint.
+ */
+function resolveMedian(median?: number, range?: string): number | undefined {
+  if (typeof median === "number" && median >= 10_000) return median;
+  const fromRange = parseRangeMidpoint(range);
+  return fromRange ?? undefined;
+}
+
 function SalaryPanel({
   currentTitle,
   targetTitle,
@@ -653,13 +695,27 @@ function SalaryPanel({
   opusTarget?: any;
   pathStatus?: string;
 }) {
-  // Prefer Sonar (current, cited, city-specific) over Opus baseline
-  const sonarHasData = sonarSalary?.current?.medianAnnual && sonarSalary?.target?.medianAnnual;
-  const usingSonar = Boolean(sonarHasData);
+  // Prefer Sonar (current, cited, city-specific) over Opus baseline. Sonar
+  // is "usable" if EITHER median or range is populated for both careers,
+  // because we can derive a midpoint from the range when the median is
+  // broken (which Sonar does inconsistently).
+  const sonarCurrentUsable = Boolean(
+    sonarSalary?.current?.medianAnnual || sonarSalary?.current?.range,
+  );
+  const sonarTargetUsable = Boolean(
+    sonarSalary?.target?.medianAnnual || sonarSalary?.target?.range,
+  );
+  const usingSonar = sonarCurrentUsable && sonarTargetUsable;
 
   const current = usingSonar
     ? {
-        medianSalary: sonarSalary.current.medianAnnual,
+        // Resolve median: prefer the explicit number if it looks real (>=10K),
+        // otherwise compute from the range string. Avoids the "$0K" rendering
+        // bug when Sonar returns a small artifact value.
+        medianSalary: resolveMedian(
+          sonarSalary.current.medianAnnual,
+          sonarSalary.current.range,
+        ),
         salaryRange: sonarSalary.current.range,
         outlookGrowth: sonarSalary.current.outlookGrowth,
         entryEducation: sonarSalary.current.entryEducation,
@@ -668,7 +724,10 @@ function SalaryPanel({
     : opusCurrent;
   const target = usingSonar
     ? {
-        medianSalary: sonarSalary.target.medianAnnual,
+        medianSalary: resolveMedian(
+          sonarSalary.target.medianAnnual,
+          sonarSalary.target.range,
+        ),
         salaryRange: sonarSalary.target.range,
         outlookGrowth: sonarSalary.target.outlookGrowth,
         entryEducation: sonarSalary.target.entryEducation,

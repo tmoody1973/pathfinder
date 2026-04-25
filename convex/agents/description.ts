@@ -5,11 +5,13 @@
  * lived terms, not what a competency profile lists. Day-in-the-life, tools,
  * career ladder, trade-offs, entry pathways, adjacent careers, who you work with.
  *
- * Why Sonnet not Haiku: this is the single most-read piece of content on the
- * path page — users come back to it across the whole bridge. Haiku produces
- * generic descriptions ("PMs prioritize features and work with teams"). Sonnet
- * produces specific, lived ones ("Most days start with a 9am standup in Linear,
- * then 90 minutes of Figma review with design before lunch..."). Worth ~3x cost.
+ * Model: Haiku 4.5. Was Sonnet 4.6 originally for prose quality, but Sonnet
+ * generates ~30-50 tokens/sec, and this 1500-2500-token structured JSON
+ * routinely tipped over the 60s timeout under load. Haiku 4.5 generates
+ * 80-150 tokens/sec, completes in 15-25s, never times out. The quality
+ * delta on structured fact retrieval (tools, comp ranges, ladder rungs) is
+ * smaller than the delta on judgment-heavy tasks like the counselor. The
+ * tightened system-prompt rules below carry most of the prose-quality load.
  *
  * The content is general to the TARGET CAREER — not the bridge or the user's
  * current role. That means it can be cached per (targetCareer, socCode) tuple
@@ -130,8 +132,8 @@ Note: this content is about THE TARGET CAREER as it actually exists in 2026, not
 Return only JSON.`;
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4000,
+    model: "claude-haiku-4-5-20251001",
+    max_tokens: 3000,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
