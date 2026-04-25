@@ -2,7 +2,8 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { Card } from "@/components/retroui/Card";
@@ -40,10 +41,46 @@ const STATUS_BG: Record<string, string> = {
 export default function PathPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const pathId = id as Id<"paths">;
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const path = useQuery(api.paths.get, { pathId });
   const agentRuns = useQuery(api.agentRuns.listForPath, { pathId });
-  const moduleDoc = useQuery(api.modules.getForPath, { pathId });
+  const generatedList = useQuery(api.modules.listForPath, { pathId });
+  const generateModule = useMutation(api.modules.generateModuleContent);
+
+  // Active module number — comes from ?module=N or defaults to the featured module.
+  const featuredNumber = useMemo(() => {
+    const flat = path?.pathOutline?.phases?.flatMap((p: any) => p.modules ?? []) ?? [];
+    const featured = flat.find((m: any) => m.isPrimaryBridge) ?? flat[0];
+    return featured?.number ?? 1;
+  }, [path?.pathOutline]);
+
+  const moduleParam = Number(searchParams.get("module"));
+  const activeModuleNumber = Number.isInteger(moduleParam) && moduleParam > 0
+    ? moduleParam
+    : featuredNumber;
+
+  const moduleDoc = useQuery(api.modules.getByNumber, { pathId, moduleNumber: activeModuleNumber });
+
+  function selectModule(n: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (n === featuredNumber) params.delete("module");
+    else params.set("module", String(n));
+    const qs = params.toString();
+    router.push(qs ? `/path/${pathId}?${qs}` : `/path/${pathId}`);
+  }
+
+  async function onModuleClick(n: number, isGenerated: boolean) {
+    if (!isGenerated) {
+      try {
+        await generateModule({ pathId, moduleNumber: n });
+      } catch (err) {
+        console.error("[generateModule] failed:", err);
+      }
+    }
+    selectModule(n);
+  }
 
   if (path === undefined || agentRuns === undefined) {
     return (
@@ -141,10 +178,17 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
 
-        {/* Full path outline — all 4 phases × 10-12 modules. Featured module is
-            highlighted; the rest are listed but their content isn't generated
-            yet (on-demand generation is the next iteration). */}
-        {path.pathOutline && <PathOutlineView outline={path.pathOutline} />}
+        {/* Full path outline — all 4 phases × 10-12 modules. Click any module
+            to generate it on-demand. Generated modules switch the content
+            below; locked modules trigger a new generation. */}
+        {path.pathOutline && (
+          <PathOutlineView
+            outline={path.pathOutline}
+            generatedNumbers={new Set((generatedList ?? []).map((m) => m.moduleNumber))}
+            activeNumber={activeModuleNumber}
+            onModuleClick={onModuleClick}
+          />
+        )}
 
         {/* Progress / agent fan-out */}
         <AgentPipeline agentRuns={agentRuns} pathStatus={path.status} />
@@ -186,17 +230,27 @@ const PHASE_COLORS: Record<number, string> = {
   4: "bg-secondary/20",
 };
 
-function PathOutlineView({ outline }: { outline: any }) {
+function PathOutlineView({
+  outline,
+  generatedNumbers,
+  activeNumber,
+  onModuleClick,
+}: {
+  outline: any;
+  generatedNumbers: Set<number>;
+  activeNumber: number;
+  onModuleClick: (n: number, isGenerated: boolean) => void;
+}) {
   return (
     <div className="mt-8">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
-          Your full learning path
+          Your full learning path · click any module to open or generate
         </Text>
         <Text as="p" className="text-xs text-muted-foreground">
           {outline.totalWeeks ?? 8} weeks · {outline.totalHours ?? 30}h ·{" "}
           {(outline.phases ?? []).reduce((acc: number, p: any) => acc + (p.modules?.length ?? 0), 0)}{" "}
-          modules
+          modules · {generatedNumbers.size} generated
         </Text>
       </div>
       <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -219,32 +273,55 @@ function PathOutlineView({ outline }: { outline: any }) {
               </Text>
             )}
             <ul className="mt-2 space-y-1">
-              {(phase.modules ?? []).map((m: any) => (
-                <li
-                  key={m.number}
-                  className={`text-sm flex items-baseline gap-2 ${m.isPrimaryBridge ? "font-head" : ""}`}
-                >
-                  <span className="text-xs text-muted-foreground w-7 flex-shrink-0">
-                    M{m.number}
-                  </span>
-                  <span className="flex-1 min-w-0">{m.title}</span>
-                  <span className="text-xs text-muted-foreground flex-shrink-0">
-                    {m.estimatedHours}h
-                  </span>
-                  {m.isPrimaryBridge && (
-                    <Badge size="sm" variant="solid" className="flex-shrink-0">
-                      Featured
-                    </Badge>
-                  )}
-                </li>
-              ))}
+              {(phase.modules ?? []).map((m: any) => {
+                const isGenerated = generatedNumbers.has(m.number);
+                const isActive = m.number === activeNumber;
+                return (
+                  <li key={m.number}>
+                    <button
+                      type="button"
+                      onClick={() => onModuleClick(m.number, isGenerated)}
+                      className={`w-full text-left text-sm flex items-baseline gap-2 rounded px-2 py-1 transition-colors hover:bg-card ${
+                        isActive ? "bg-card border-2 border-black -mx-0.5" : "border-2 border-transparent -mx-0.5"
+                      }`}
+                    >
+                      <span className="text-xs text-muted-foreground w-7 flex-shrink-0 font-head">
+                        M{m.number}
+                      </span>
+                      <span
+                        className={`flex-1 min-w-0 ${m.isPrimaryBridge ? "font-head" : ""}`}
+                      >
+                        {m.title}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {m.estimatedHours}h
+                      </span>
+                      {isActive && (
+                        <Badge size="sm" variant="solid" className="flex-shrink-0">
+                          Active
+                        </Badge>
+                      )}
+                      {!isActive && isGenerated && (
+                        <Badge size="sm" variant="default" className="flex-shrink-0">
+                          ✓
+                        </Badge>
+                      )}
+                      {!isActive && !isGenerated && (
+                        <Badge size="sm" variant="outline" className="flex-shrink-0">
+                          Generate
+                        </Badge>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ))}
       </div>
       <Text as="p" className="mt-3 text-xs text-muted-foreground">
-        The featured module&apos;s full content is generated below. Other modules
-        will generate on-demand when you click into them (coming next).
+        Active module&apos;s content is shown below. Click any other module to
+        switch (instant if already generated, ~30-60s if it needs to generate).
       </Text>
     </div>
   );

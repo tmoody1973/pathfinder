@@ -4,7 +4,11 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import Anthropic from "@anthropic-ai/sdk";
-import type { SkillDiffResult } from "./agents/skillDiff";
+import type {
+  SkillDiffResult,
+  PathOutlineModule,
+  PathOutline,
+} from "./agents/skillDiff";
 import { runPureSkillDiff } from "./agents/pureSkillDiff";
 import { runLessonAgent } from "./agents/lesson";
 import { runResourceAgent } from "./agents/resource";
@@ -202,9 +206,19 @@ export const run = internalAction({
     ]);
 
     // === Phase 3: Aggregate into modules row ===
+    // Identify the featured module from pathOutline so this row is keyed by
+    // its real moduleNumber (used by on-demand generation to know which
+    // module is which).
+    const featuredModule = findFeaturedModule(skillDiff.pathOutline);
+    const featuredNumber = featuredModule?.number ?? 1;
+    const featuredTitle = featuredModule?.title;
+
     try {
       await ctx.runMutation(internal.modules.insert, {
         pathId,
+        moduleNumber: featuredNumber,
+        isFeatured: true,
+        title: featuredTitle,
         careerDiff: skillDiff,
         lesson: lessonResult ?? undefined,
         videos: resourceResult?.videos ?? undefined,
@@ -261,3 +275,196 @@ async function runAgentSettled<T>(
   }
 }
 
+/** Find the primary-bridge module in a pathOutline. */
+function findFeaturedModule(
+  outline: PathOutline | undefined,
+): PathOutlineModule | undefined {
+  if (!outline) return undefined;
+  for (const phase of outline.phases ?? []) {
+    for (const m of phase.modules ?? []) {
+      if (m.isPrimaryBridge) return m;
+    }
+  }
+  return outline.phases?.[0]?.modules?.[0];
+}
+
+/**
+ * Build a module-specific SkillDiffResult by overlaying a target module's
+ * spec onto the path's master skillDiff. Used by on-demand module generation.
+ * The skill profiles + diff stay the same (they're path-level), but the
+ * headline is rewritten to the module's specific bridge.
+ */
+function specializeSkillDiffForModule(
+  master: SkillDiffResult,
+  moduleSpec: PathOutlineModule,
+): SkillDiffResult {
+  // Find a competency in the diff matching the module's skillDomain by name,
+  // else synthesize one from the spec so downstream agents have a coherent target.
+  const allCompetencies = [
+    ...master.diff.gainedKnowledge,
+    ...master.diff.gainedSkills,
+    ...master.diff.sharedKnowledge,
+    ...master.diff.sharedSkills,
+  ];
+  const matched = allCompetencies.find(
+    (c) => c.name.toLowerCase() === moduleSpec.skillDomain.toLowerCase(),
+  );
+  const primaryBridge =
+    matched ??
+    {
+      elementId: `module.${moduleSpec.number}.${moduleSpec.skillDomain
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")}`,
+      name: moduleSpec.skillDomain || moduleSpec.title,
+      importance: 80,
+      level: 60,
+    };
+
+  // Heuristic: knowledge if it appears in any knowledge array; otherwise skill.
+  const inKnowledge = [
+    ...master.diff.gainedKnowledge,
+    ...master.diff.sharedKnowledge,
+  ].some((k) => k.elementId === primaryBridge.elementId);
+
+  return {
+    ...master,
+    diff: { ...master.diff, primaryBridge: { competency: primaryBridge, type: inKnowledge ? "knowledge" : "skill" } },
+    headline: {
+      primaryBridge,
+      primaryBridgeType: inKnowledge ? "knowledge" : "skill",
+      framing: `Module ${moduleSpec.number}: ${moduleSpec.topic}`,
+      moduleTopic: moduleSpec.title,
+      bloomLevel: moduleSpec.bloomLevel,
+      estimatedHours: moduleSpec.estimatedHours,
+    },
+  };
+}
+
+/**
+ * On-demand: generate the 8 content agents' output for a SPECIFIC module in
+ * a path's outline. Public mutation modules.generateModuleContent schedules
+ * this. Same pipeline shape as `run` but skips skillDiff (we already have the
+ * master one stored on the path) and inserts the module row keyed to
+ * (pathId, moduleNumber).
+ */
+export const generateForModule = internalAction({
+  args: {
+    pathId: v.id("paths"),
+    moduleNumber: v.number(),
+  },
+  handler: async (ctx, { pathId, moduleNumber }): Promise<void> => {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const path = await ctx.runQuery(internal.paths.getInternal, { pathId });
+    if (!path) throw new Error(`Path ${pathId} not found`);
+
+    const outline = (path.pathOutline ?? null) as PathOutline | null;
+    if (!outline) throw new Error("Path has no outline; cannot generate module on-demand.");
+
+    let moduleSpec: PathOutlineModule | undefined;
+    for (const phase of outline.phases ?? []) {
+      const m = phase.modules?.find((m) => m.number === moduleNumber);
+      if (m) {
+        moduleSpec = m;
+        break;
+      }
+    }
+    if (!moduleSpec) {
+      throw new Error(`Module ${moduleNumber} not in outline.`);
+    }
+
+    // Reconstruct the master skillDiff from the featured module's row (we
+    // stored it as careerDiff during the initial run).
+    const featured = await ctx.runQuery(internal.modules.getFeaturedInternal, { pathId });
+    if (!featured) throw new Error("Featured module not found; cannot specialize.");
+    const masterDiff = featured.careerDiff as SkillDiffResult;
+    const specialized = specializeSkillDiffForModule(masterDiff, moduleSpec);
+
+    // Pre-create the 7 content agentRuns for THIS module's generation
+    const lessonRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "lesson",
+    });
+    const resourceRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "resource",
+    });
+    const assessmentRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "assessment",
+    });
+    const courseRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "course",
+    });
+    const communityRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "community",
+    });
+    const booksRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "books",
+    });
+    const newsRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "news",
+    });
+
+    const lessonPromise = runAgentSettled(ctx, lessonRunId, "lesson", () =>
+      withTimeout(runLessonAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "lesson"),
+    );
+    const resourcePromise = runAgentSettled(ctx, resourceRunId, "resource", () =>
+      withTimeout(runResourceAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "resource"),
+    );
+    const assessmentPromise = runAgentSettled(ctx, assessmentRunId, "assessment", () =>
+      withTimeout(runAssessmentAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "assessment"),
+    );
+    const coursePromise = runAgentSettled(ctx, courseRunId, "course", () =>
+      withTimeout(runCourseAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "course"),
+    );
+    const communityPromise = runAgentSettled(ctx, communityRunId, "community", () =>
+      withTimeout(runCommunityAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "community"),
+    );
+    const booksPromise = runAgentSettled(ctx, booksRunId, "books", () =>
+      withTimeout(runBooksAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "books"),
+    );
+    const newsPromise = runAgentSettled(ctx, newsRunId, "news", () =>
+      withTimeout(runNewsAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "news"),
+    );
+
+    const [
+      lessonResult,
+      resourceResult,
+      assessmentResult,
+      courseResult,
+      communityResult,
+      booksResult,
+      newsResult,
+    ] = await Promise.all([
+      lessonPromise,
+      resourcePromise,
+      assessmentPromise,
+      coursePromise,
+      communityPromise,
+      booksPromise,
+      newsPromise,
+    ]);
+
+    await ctx.runMutation(internal.modules.insert, {
+      pathId,
+      moduleNumber,
+      isFeatured: false,
+      title: moduleSpec.title,
+      careerDiff: specialized,
+      lesson: lessonResult ?? undefined,
+      videos: resourceResult?.videos ?? undefined,
+      quiz: assessmentResult?.quiz ?? undefined,
+      project: assessmentResult?.project ?? undefined,
+      course: courseResult ?? undefined,
+      community: communityResult ?? undefined,
+      books: booksResult ?? undefined,
+      news: newsResult ?? undefined,
+      cached: false,
+    });
+  },
+});

@@ -69,17 +69,22 @@ export default defineSchema({
 
   modules: defineTable({
     pathId: v.id("paths"),
-    careerDiff: v.any(),                 // SkillDiffResult: current, target, diff, headline
-    lesson: v.optional(v.any()),         // LessonResult: { intro, sections: [...] }
+    moduleNumber: v.number(),            // 1..N within the path's outline
+    isFeatured: v.boolean(),             // true for the primary-bridge module auto-generated on path creation
+    title: v.optional(v.string()),       // mirrors pathOutline module title for fast lookup
+    careerDiff: v.any(),                 // SkillDiffResult, may be specialized to this module's bridge
+    lesson: v.optional(v.any()),
     videos: v.optional(v.array(v.any())),
     audioUrl: v.optional(v.string()),
     quiz: v.optional(v.array(v.any())),
     project: v.optional(v.any()),
-    course: v.optional(v.any()),         // CourseResult: { moocs, source, socCode }
-    community: v.optional(v.any()),      // CommunityResult: { communities, people, newsletters, source, socCode }
-    books: v.optional(v.any()),          // BooksResult: { queries, books: [...] }
-    news: v.optional(v.any()),           // NewsResult: { items, citations }
+    course: v.optional(v.any()),
+    community: v.optional(v.any()),
+    books: v.optional(v.any()),
+    news: v.optional(v.any()),
     cached: v.boolean(),
     createdAt: v.number(),
-  }).index("by_path", ["pathId"]),
+  })
+    .index("by_path", ["pathId"])
+    .index("by_path_and_number", ["pathId", "moduleNumber"]),
 });
