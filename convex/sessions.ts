@@ -97,3 +97,57 @@ export const resetMyRateLimit = mutation({
     return { reset: true };
   },
 });
+
+/**
+ * Anonymous → authenticated migration. Called from the client right after a
+ * user signs in. Attaches the anonymous session and all its paths to the
+ * authenticated Clerk user, so the user sees their previous work in their
+ * dashboard.
+ *
+ * Idempotent: re-running it does nothing if everything is already migrated.
+ * Safe: only mutates rows owned by the caller's anonymousId — no cross-user
+ * leakage. The Clerk identity is verified server-side via ctx.auth.
+ */
+export const claimAnonymousPaths = mutation({
+  args: { anonymousId: v.string() },
+  handler: async (ctx, { anonymousId }) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Must be signed in to claim anonymous paths.");
+    }
+    const userId = identity.subject;
+
+    // Find the anonymous session
+    const session = await ctx.db
+      .query("sessions")
+      .withIndex("by_anonymous", (q) => q.eq("anonymousId", anonymousId))
+      .unique();
+    if (!session) return { claimed: 0, reason: "no anonymous session" };
+
+    // Already claimed by a different user? Don't overwrite.
+    if (session.userId && session.userId !== userId) {
+      return { claimed: 0, reason: "session belongs to another user" };
+    }
+
+    // Tag the session with the userId
+    if (session.userId !== userId) {
+      await ctx.db.patch(session._id, { userId });
+    }
+
+    // Tag all of the session's paths with the userId
+    const paths = await ctx.db
+      .query("paths")
+      .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+      .collect();
+
+    let claimedCount = 0;
+    for (const path of paths) {
+      if (path.userId !== userId) {
+        await ctx.db.patch(path._id, { userId });
+        claimedCount++;
+      }
+    }
+
+    return { claimed: claimedCount, sessionId: session._id };
+  },
+});

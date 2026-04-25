@@ -14,13 +14,17 @@ import { v } from "convex/values";
 export default defineSchema({
   sessions: defineTable({
     anonymousId: v.string(),
+    userId: v.optional(v.string()),  // Clerk subject ID once user signs in. Sessions migrate from anonymous → authenticated.
     createdAt: v.number(),
     generationTimestamps: v.array(v.number()),
     inFlightPathId: v.optional(v.id("paths")),
-  }).index("by_anonymous", ["anonymousId"]),
+  })
+    .index("by_anonymous", ["anonymousId"])
+    .index("by_user", ["userId"]),
 
   paths: defineTable({
     sessionId: v.id("sessions"),
+    userId: v.optional(v.string()),  // Clerk user ID — populated after a user authenticates. Anonymous paths get this on sign-in via migration.
     currentCareer: v.string(),
     currentONET: v.string(),
     currentReasoning: v.optional(v.string()),
@@ -31,6 +35,7 @@ export default defineSchema({
     city: v.optional(v.string()),  // user's city/metro for location-specific salary lookup
     profileText: v.optional(v.string()),  // pasted LinkedIn About+Experience or resume — personalizes the bridge
     currentSalary: v.optional(v.number()),  // user's actual current annual salary — personalizes salary lift math vs median
+    title: v.optional(v.string()),  // user-editable nickname for this path, defaults to "current → target"
     status: v.union(
       v.literal("pending"),
       v.literal("diffing"),
@@ -43,7 +48,9 @@ export default defineSchema({
     errorReason: v.optional(v.string()),
     pathOutline: v.optional(v.any()),  // generated upfront with skillDiff: phases + modules + bridge marker
     createdAt: v.number(),
-  }).index("by_session", ["sessionId"]),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_user", ["userId"]),
 
   agentRuns: defineTable({
     pathId: v.id("paths"),

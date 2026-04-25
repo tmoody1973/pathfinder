@@ -44,6 +44,11 @@ export const createPath = mutation({
       anonymousId: args.anonymousId,
     });
 
+    // If the user is signed in, stamp their Clerk userId on the path immediately
+    // so it lands in their /paths dashboard without needing the migration step.
+    const identity = await ctx.auth.getUserIdentity();
+    const userId = identity?.subject;
+
     if (session.inFlightPathId) {
       throw new ConvexError({
         kind: "rate_limited",
@@ -89,6 +94,7 @@ export const createPath = mutation({
     const now = Date.now();
     const pathId = await ctx.db.insert("paths", {
       sessionId: session._id,
+      userId,
       currentCareer: currentTrim,
       currentONET: "", // resolved by orchestrator
       targetCareer: targetTrim,
@@ -136,6 +142,24 @@ export const listForSession = query({
       .withIndex("by_session", (q) => q.eq("sessionId", sessionId))
       .order("desc")
       .take(20);
+  },
+});
+
+/**
+ * Public query: list paths for the currently authenticated user, newest first.
+ * Drives the /paths dashboard. Returns an empty array if not signed in.
+ */
+export const listForCurrentUser = query({
+  args: {},
+  handler: async (ctx): Promise<Doc<"paths">[]> => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const userId = identity.subject;
+    return await ctx.db
+      .query("paths")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(50);
   },
 });
 
