@@ -16,6 +16,9 @@ export const insert = internalMutation({
     quiz: v.optional(v.array(v.any())),
     project: v.optional(v.any()),
     audioUrl: v.optional(v.string()),
+    course: v.optional(v.any()),
+    community: v.optional(v.any()),
+    books: v.optional(v.any()),
     cached: v.boolean(),
   },
   handler: async (ctx, args): Promise<Id<"modules">> => {

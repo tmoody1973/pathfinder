@@ -14,6 +14,9 @@ const agentLiteral = v.union(
   v.literal("resource"),
   v.literal("assessment"),
   v.literal("audio"),
+  v.literal("course"),
+  v.literal("community"),
+  v.literal("books"),
 );
 
 const statusLiteral = v.union(

@@ -48,6 +48,9 @@ export default defineSchema({
       v.literal("resource"),
       v.literal("assessment"),
       v.literal("audio"),
+      v.literal("course"),
+      v.literal("community"),
+      v.literal("books"),
     ),
     status: v.union(
       v.literal("pending"),
@@ -70,6 +73,9 @@ export default defineSchema({
     audioUrl: v.optional(v.string()),
     quiz: v.optional(v.array(v.any())),
     project: v.optional(v.any()),
+    course: v.optional(v.any()),         // CourseResult: { moocs, source, socCode }
+    community: v.optional(v.any()),      // CommunityResult: { communities, people, newsletters, source, socCode }
+    books: v.optional(v.any()),          // BooksResult: { queries, books: [...] }
     cached: v.boolean(),
     createdAt: v.number(),
   }).index("by_path", ["pathId"]),

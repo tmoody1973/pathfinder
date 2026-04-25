@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -8,12 +8,23 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { Card } from "@/components/retroui/Card";
 import { Badge } from "@/components/retroui/Badge";
 import { Text } from "@/components/retroui/Text";
+import { Button } from "@/components/retroui/Button";
+import {
+  Tabs,
+  TabsContent,
+  TabsPanels,
+  TabsTrigger,
+  TabsTriggerList,
+} from "@/components/retroui/Tab";
 
 const AGENT_LABELS: Record<string, string> = {
   skillDiff: "Skill Diff · Opus 4.7",
   lesson: "Lesson · Haiku 4.5",
-  resource: "Resource · Haiku 4.5",
+  resource: "Videos · Haiku 4.5",
   assessment: "Assessment · Haiku 4.5",
+  course: "Courses · Haiku 4.5",
+  community: "Community · Haiku 4.5",
+  books: "Books · Haiku + Google Books",
   audio: "Audio · Haiku + ElevenLabs",
 };
 
@@ -36,20 +47,15 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
   if (path === undefined || agentRuns === undefined) {
     return (
       <main className="flex-1 flex items-center justify-center">
-        <Text as="p" className="text-muted-foreground">
-          Loading...
-        </Text>
+        <Text as="p" className="text-muted-foreground">Loading...</Text>
       </main>
     );
   }
-
   if (path === null) {
     return (
       <main className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
         <Text as="p">Path not found.</Text>
-        <Link href="/" className="underline">
-          Back to start
-        </Link>
+        <Link href="/" className="underline">Back to start</Link>
       </main>
     );
   }
@@ -59,444 +65,668 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
     skillDiffRun?.status === "done" ? (skillDiffRun.output as any) : null;
 
   return (
-    <main className="flex-1 px-6 py-12 md:py-16">
+    <main className="flex-1 px-6 py-8 md:py-12">
       <div className="mx-auto max-w-4xl">
-        <Link
-          href="/"
-          className="text-sm text-muted-foreground hover:text-foreground"
-        >
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
           ← Try another bridge
         </Link>
 
-        {/* Header — career inputs and resolutions */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="block w-full">
-            <Card.Header>
-              <Text
-                as="p"
-                className="text-xs uppercase tracking-widest text-muted-foreground"
-              >
-                From
-              </Text>
-              <Text as="h2" className="text-3xl">
-                {path.currentCareer}
-              </Text>
-              {path.currentONET && (
-                <Text as="p" className="mt-2 text-sm text-foreground/70">
-                  <span className="font-mono text-xs">{path.currentONET}</span>
-                  {path.currentReasoning ? ` · ${path.currentReasoning}` : ""}
-                </Text>
-              )}
-            </Card.Header>
-          </Card>
-          <Card className="block w-full">
-            <Card.Header>
-              <Text
-                as="p"
-                className="text-xs uppercase tracking-widest text-muted-foreground"
-              >
-                To
-              </Text>
-              <Text as="h2" className="text-3xl">
-                {path.targetCareer}
-              </Text>
-              {path.targetONET && (
-                <Text as="p" className="mt-2 text-sm text-foreground/70">
-                  <span className="font-mono text-xs">{path.targetONET}</span>
-                  {path.targetReasoning ? ` · ${path.targetReasoning}` : ""}
-                </Text>
-              )}
-            </Card.Header>
-          </Card>
-        </div>
-
-        {/* Path-level status pill */}
+        {/* Breadcrumb + title — matches sample module header */}
         <div className="mt-6">
-          <Badge
-            variant={
-              path.status === "done"
-                ? "surface"
-                : path.status === "error" || path.status === "timeout"
-                  ? "outline"
-                  : "solid"
-            }
-            size="lg"
-          >
-            {path.status}
-            {path.errorReason ? ` — ${path.errorReason}` : ""}
-          </Badge>
-        </div>
-
-        {/* Agent tiles — fan-out animation */}
-        <Text
-          as="h3"
-          className="mt-10 text-sm uppercase tracking-widest text-muted-foreground"
-        >
-          Agent pipeline
-        </Text>
-        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {agentRuns.length === 0 ? (
-            <Text as="p" className="col-span-full text-sm text-muted-foreground">
-              Spinning up agents...
-            </Text>
-          ) : (
-            agentRuns.map((run) => {
-              const elapsedMs =
-                run.startedAt && run.finishedAt
-                  ? run.finishedAt - run.startedAt
-                  : null;
-              return (
-                <Card
-                  key={run._id}
-                  className={`block w-full transition-colors ${STATUS_BG[run.status] ?? STATUS_BG.pending}`}
-                >
-                  <Card.Header>
-                    <div className="flex items-center justify-between">
-                      <Text as="p" className="font-head text-sm">
-                        {AGENT_LABELS[run.agent] ?? run.agent}
-                      </Text>
-                      <Badge size="sm" variant="outline">
-                        {run.status}
-                        {elapsedMs !== null && run.status === "done" && (
-                          <span className="ml-1">· {(elapsedMs / 1000).toFixed(1)}s</span>
-                        )}
-                      </Badge>
-                    </div>
-                    {run.errorMessage && (
-                      <Text as="p" className="mt-2 text-xs">
-                        data unavailable · {run.errorMessage}
-                      </Text>
-                    )}
-                  </Card.Header>
-                </Card>
-              );
-            })
-          )}
-        </div>
-
-        {/* Skill diff output — the headline bridge */}
-        {skillDiffOutput && (
-          <Card className="mt-10 block w-full">
-            <Card.Header>
-              <Text
-                as="p"
-                className="text-xs uppercase tracking-widest text-muted-foreground"
-              >
-                Bridge from {path.currentCareer} → {path.targetCareer}
-              </Text>
-              <Text as="h3" className="text-3xl mt-1">
-                {skillDiffOutput.headline?.primaryBridge?.name}
-                <Badge size="sm" variant="default" className="ml-3 align-middle">
-                  {skillDiffOutput.headline?.primaryBridgeType}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+            <Badge variant="surface" size="sm">
+              {path.currentCareer} → {path.targetCareer}
+            </Badge>
+            <span>›</span>
+            <span>Bridge Module</span>
+            <span>›</span>
+            <span>1/1</span>
+          </div>
+          <Text as="h1" className="text-3xl md:text-4xl mt-3">
+            {skillDiffOutput?.headline?.moduleTopic ?? "Generating your bridge..."}
+          </Text>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {skillDiffOutput && (
+              <>
+                <Badge size="sm" variant="default">
+                  {skillDiffOutput.headline?.estimatedHours ?? 4}h
                 </Badge>
-              </Text>
-              {skillDiffOutput.headline?.framing && (
-                <Text as="p" className="mt-3 text-base leading-relaxed">
-                  {skillDiffOutput.headline.framing}
-                </Text>
-              )}
-            </Card.Header>
-            <Card.Content>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div>
-                  <Text
-                    as="p"
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Module topic
-                  </Text>
-                  <Text as="p" className="mt-1">
-                    {skillDiffOutput.headline?.moduleTopic}
-                  </Text>
-                </div>
-                <div>
-                  <Text
-                    as="p"
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Bloom level
-                  </Text>
-                  <Text as="p" className="mt-1">
-                    {skillDiffOutput.headline?.bloomLevel}
-                  </Text>
-                </div>
-                <div>
-                  <Text
-                    as="p"
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Estimated
-                  </Text>
-                  <Text as="p" className="mt-1">
-                    {skillDiffOutput.headline?.estimatedHours}h
-                  </Text>
-                </div>
-              </div>
+                <Badge size="sm" variant="default">
+                  Bloom&apos;s: {skillDiffOutput.headline?.bloomLevel}
+                </Badge>
+                <Badge size="sm" variant="default">
+                  O*NET: {path.targetONET}
+                </Badge>
+                <Badge size="sm" variant="surface">
+                  Bridge: {skillDiffOutput.headline?.primaryBridge?.name}
+                </Badge>
+              </>
+            )}
+          </div>
+        </div>
 
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <Text
-                    as="p"
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Knowledge to develop
-                  </Text>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    {(skillDiffOutput.diff?.gainedKnowledge ?? []).slice(0, 6).map(
-                      (c: any) => (
-                        <li key={c.elementId} className="flex justify-between">
-                          <span>{c.name}</span>
-                          <span className="text-muted-foreground">{c.importance}</span>
-                        </li>
-                      ),
-                    )}
-                    {(skillDiffOutput.diff?.gainedKnowledge ?? []).length === 0 && (
-                      <li className="text-muted-foreground">— shared with current —</li>
-                    )}
-                  </ul>
-                </div>
-                <div>
-                  <Text
-                    as="p"
-                    className="text-xs uppercase tracking-widest text-muted-foreground"
-                  >
-                    Skills to strengthen
-                  </Text>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    {(skillDiffOutput.diff?.gainedSkills ?? []).slice(0, 6).map(
-                      (c: any) => (
-                        <li key={c.elementId} className="flex justify-between">
-                          <span>{c.name}</span>
-                          <span className="text-muted-foreground">{c.importance}</span>
-                        </li>
-                      ),
-                    )}
-                    {(skillDiffOutput.diff?.gainedSkills ?? []).length === 0 && (
-                      <li className="text-muted-foreground">— shared with current —</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            </Card.Content>
+        {/* Career resolution strip — concise */}
+        {(path.currentReasoning || path.targetReasoning) && (
+          <div className="mt-5 text-xs text-foreground/70 bg-accent border-2 border-black rounded px-3 py-2">
+            {path.currentReasoning && (
+              <div><span className="font-head">From:</span> {path.currentReasoning}</div>
+            )}
+            {path.targetReasoning && (
+              <div className="mt-0.5"><span className="font-head">To:</span> {path.targetReasoning}</div>
+            )}
+          </div>
+        )}
+
+        {/* Progress / agent fan-out */}
+        <AgentPipeline agentRuns={agentRuns} pathStatus={path.status} />
+
+        {/* Bridge framing — from skillDiff */}
+        {skillDiffOutput?.headline?.framing && (
+          <Card className="mt-6 block w-full">
+            <div className="p-5">
+              <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+                Why this bridge
+              </Text>
+              <Text as="p" className="text-base leading-relaxed">
+                {skillDiffOutput.headline.framing}
+              </Text>
+            </div>
           </Card>
         )}
 
-        {/* The assembled bridge module — rendered once aggregation is done */}
-        {moduleDoc && <ModuleContent moduleDoc={moduleDoc} />}
+        {/* Tabbed module content — matches sample module pattern */}
+        {moduleDoc && (
+          <ModuleTabs
+            moduleDoc={moduleDoc}
+            skillDiff={skillDiffOutput}
+            currentCareer={path.currentCareer}
+            targetCareer={path.targetCareer}
+          />
+        )}
       </div>
     </main>
   );
 }
 
-/* === Bridge module content sections === */
+/* ===== Agent pipeline progress ===== */
 
-function ModuleContent({ moduleDoc }: { moduleDoc: any }) {
+function AgentPipeline({ agentRuns, pathStatus }: { agentRuns: any[]; pathStatus: string }) {
+  const done = agentRuns.filter((r) => r.status === "done").length;
+  const total = agentRuns.length || 6;
+  const pct = Math.round((done / total) * 100);
+
   return (
-    <div className="mt-12 space-y-10">
-      <Text as="h2" className="text-3xl">
-        The Bridge Module
-      </Text>
-
-      {moduleDoc.lesson && <LessonSection lesson={moduleDoc.lesson} />}
-      {moduleDoc.videos && moduleDoc.videos.length > 0 && (
-        <ResourceSection videos={moduleDoc.videos} />
-      )}
-      {moduleDoc.quiz && moduleDoc.quiz.length > 0 && (
-        <QuizSection quiz={moduleDoc.quiz} />
-      )}
-      {moduleDoc.project && <ProjectSection project={moduleDoc.project} />}
-    </div>
-  );
-}
-
-function LessonSection({ lesson }: { lesson: any }) {
-  return (
-    <Card className="block w-full">
-      <Card.Header>
-        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
-          Lesson · 10 min read
-        </Text>
-        {lesson.intro && (
-          <Text as="p" className="mt-3 text-lg leading-relaxed">
-            {lesson.intro}
-          </Text>
-        )}
-      </Card.Header>
-      <Card.Content>
-        <div className="space-y-6">
-          {(lesson.sections ?? []).map((section: any, i: number) => (
-            <article key={i}>
-              <Text as="h4" className="text-xl">
-                {section.heading}
-              </Text>
-              <Text as="p" className="mt-2 leading-relaxed whitespace-pre-line">
-                {section.body}
-              </Text>
-              {section.tryThis && (
-                <div className="mt-3 rounded border-2 border-black bg-accent p-3 text-sm">
-                  <span className="font-head text-xs uppercase tracking-widest mr-2">
-                    Try this →
-                  </span>
-                  {section.tryThis}
-                </div>
-              )}
-            </article>
-          ))}
-        </div>
-      </Card.Content>
-    </Card>
-  );
-}
-
-function ResourceSection({ videos }: { videos: any[] }) {
-  return (
-    <div>
-      <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
-        Curated videos · {videos.length}
-      </Text>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {videos.map((v) => (
-          <a
-            key={v.videoId}
-            href={v.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block group"
-          >
-            <Card className="block w-full transition-all group-hover:shadow-none">
-              <div className="flex gap-3 p-3">
-                {v.thumbnailUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={v.thumbnailUrl}
-                    alt=""
-                    className="w-32 h-20 object-cover rounded border-2 border-black flex-shrink-0"
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <Text as="p" className="font-head text-sm leading-snug line-clamp-2">
-                    {v.title}
-                  </Text>
-                  <Text as="p" className="mt-1 text-xs text-muted-foreground">
-                    {v.channelTitle} · {v.duration}
-                  </Text>
-                  <Badge size="sm" variant="outline" className="mt-2">
-                    {v.relevanceScore}/100
-                  </Badge>
-                </div>
-              </div>
-            </Card>
-          </a>
-        ))}
+    <div className="mt-6">
+      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+        <span>Agent pipeline · {pathStatus}</span>
+        <span>{done}/{total} complete</span>
       </div>
-    </div>
-  );
-}
-
-function QuizSection({ quiz }: { quiz: any[] }) {
-  return (
-    <Card className="block w-full">
-      <Card.Header>
-        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
-          Practice quiz · {quiz.length} scenarios
-        </Text>
-      </Card.Header>
-      <Card.Content>
-        <div className="space-y-6">
-          {quiz.map((q: any, i: number) => (
-            <QuizQuestion key={i} q={q} index={i} />
-          ))}
-        </div>
-      </Card.Content>
-    </Card>
-  );
-}
-
-function QuizQuestion({ q, index }: { q: any; index: number }) {
-  const [selected, setSelected] = useState<number | null>(null);
-  const showResult = selected !== null;
-  return (
-    <div>
-      <Text as="p" className="font-head">
-        {index + 1}. {q.q}
-      </Text>
-      <div className="mt-3 space-y-2">
-        {(q.options ?? []).map((opt: string, j: number) => {
-          const isCorrect = j === q.correct;
-          const isSelected = selected === j;
-          let style = "border-2 border-black bg-card hover:bg-accent";
-          if (showResult && isCorrect) style = "border-2 border-emerald-500 bg-emerald-50";
-          else if (showResult && isSelected && !isCorrect)
-            style = "border-2 border-destructive bg-red-50";
+      <div className="h-3 bg-muted rounded-full overflow-hidden border-2 border-black">
+        <div
+          className="h-full bg-primary transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
+        {agentRuns.map((run) => {
+          const elapsed = run.startedAt && run.finishedAt
+            ? ((run.finishedAt - run.startedAt) / 1000).toFixed(1)
+            : null;
           return (
-            <button
-              key={j}
-              type="button"
-              onClick={() => !showResult && setSelected(j)}
-              disabled={showResult}
-              className={`block w-full text-left rounded p-3 transition-colors ${style}`}
+            <div
+              key={run._id}
+              className={`border-2 border-black rounded p-2 transition-colors ${STATUS_BG[run.status] ?? STATUS_BG.pending}`}
             >
-              {opt}
-            </button>
+              <Text as="p" className="font-head text-xs leading-tight">
+                {AGENT_LABELS[run.agent] ?? run.agent}
+              </Text>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xs uppercase tracking-wider">{run.status}</span>
+                {elapsed && run.status === "done" && (
+                  <span className="text-xs opacity-70">{elapsed}s</span>
+                )}
+              </div>
+            </div>
           );
         })}
       </div>
-      {showResult && q.explanation && (
-        <div className="mt-3 rounded border-2 border-black bg-accent p-3 text-sm">
-          <span className="font-head text-xs uppercase tracking-widest mr-2">Why →</span>
-          {q.explanation}
+    </div>
+  );
+}
+
+/* ===== Tabbed module content ===== */
+
+function ModuleTabs({
+  moduleDoc,
+  skillDiff,
+  currentCareer,
+  targetCareer,
+}: {
+  moduleDoc: any;
+  skillDiff: any;
+  currentCareer: string;
+  targetCareer: string;
+}) {
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+  const [projectStarted, setProjectStarted] = useState(false);
+
+  const quiz = moduleDoc.quiz ?? [];
+  const quizScore = useMemo(
+    () =>
+      Object.entries(quizAnswers).filter(
+        ([k, v]) => quiz[Number(k)]?.correct === v,
+      ).length,
+    [quizAnswers, quiz],
+  );
+
+  return (
+    <div className="mt-8">
+      <Tabs>
+        <TabsTriggerList className="overflow-x-auto">
+          <TabsTrigger>Lesson</TabsTrigger>
+          <TabsTrigger>Videos</TabsTrigger>
+          <TabsTrigger>Courses</TabsTrigger>
+          <TabsTrigger>Books</TabsTrigger>
+          <TabsTrigger>
+            Quiz
+            {quizSubmitted && (
+              <span className="ml-1.5 text-xs">· {quizScore}/{quiz.length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger>Project</TabsTrigger>
+          <TabsTrigger>Community</TabsTrigger>
+        </TabsTriggerList>
+
+        <TabsPanels>
+          {/* LESSON — accordion */}
+          <TabsContent>
+            <LessonTab lesson={moduleDoc.lesson} />
+          </TabsContent>
+
+          {/* VIDEOS */}
+          <TabsContent>
+            <VideosTab videos={moduleDoc.videos ?? []} />
+          </TabsContent>
+
+          {/* COURSES */}
+          <TabsContent>
+            <CoursesTab course={moduleDoc.course} />
+          </TabsContent>
+
+          {/* BOOKS */}
+          <TabsContent>
+            <BooksTab books={moduleDoc.books} />
+          </TabsContent>
+
+          {/* QUIZ */}
+          <TabsContent>
+            <QuizTab
+              quiz={quiz}
+              answers={quizAnswers}
+              submitted={quizSubmitted}
+              score={quizScore}
+              onAnswer={(qIdx, aIdx) => {
+                if (!quizSubmitted) setQuizAnswers({ ...quizAnswers, [qIdx]: aIdx });
+              }}
+              onSubmit={() => setQuizSubmitted(true)}
+            />
+          </TabsContent>
+
+          {/* PROJECT */}
+          <TabsContent>
+            <ProjectTab
+              project={moduleDoc.project}
+              started={projectStarted}
+              onStart={() => setProjectStarted(true)}
+            />
+          </TabsContent>
+
+          {/* COMMUNITY */}
+          <TabsContent>
+            <CommunityTab community={moduleDoc.community} />
+          </TabsContent>
+        </TabsPanels>
+      </Tabs>
+    </div>
+  );
+}
+
+/* ===== Tab contents ===== */
+
+function LessonTab({ lesson }: { lesson: any }) {
+  const [expanded, setExpanded] = useState<number>(0);
+  if (!lesson) {
+    return <Text as="p" className="text-muted-foreground">Lesson is still generating...</Text>;
+  }
+  return (
+    <div className="space-y-4">
+      {lesson.intro && (
+        <div className="border-2 border-black rounded bg-accent p-4">
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-2">Intro</Text>
+          <Text as="p" className="leading-relaxed">{lesson.intro}</Text>
+        </div>
+      )}
+      {(lesson.sections ?? []).map((section: any, i: number) => (
+        <div key={i} className="border-2 border-black rounded overflow-hidden bg-card">
+          <button
+            type="button"
+            onClick={() => setExpanded(expanded === i ? -1 : i)}
+            className="w-full flex justify-between items-center p-4 text-left hover:bg-accent transition"
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-7 h-7 rounded-full bg-primary text-primary-foreground border-2 border-black flex items-center justify-center text-xs font-head">
+                {i + 1}
+              </span>
+              <span className="font-head">{section.heading}</span>
+            </div>
+            <span className="text-2xl font-head">{expanded === i ? "−" : "+"}</span>
+          </button>
+          {expanded === i && (
+            <div className="px-4 pb-4 border-t-2 border-black">
+              <Text as="p" className="mt-3 leading-relaxed whitespace-pre-line">
+                {section.body}
+              </Text>
+              {section.tryThis && (
+                <div className="mt-4 border-2 border-black rounded bg-primary/20 p-3">
+                  <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">
+                    Try this now
+                  </Text>
+                  <Text as="p" className="text-sm">{section.tryThis}</Text>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+      <div className="border-2 border-black rounded bg-muted p-4">
+        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+          Spaced review scheduled
+        </Text>
+        <Text as="p" className="text-sm">
+          Key concepts resurface in <span className="font-head">3 days</span>, <span className="font-head">7 days</span>, and <span className="font-head">21 days</span>.
+        </Text>
+      </div>
+    </div>
+  );
+}
+
+function VideosTab({ videos }: { videos: any[] }) {
+  if (videos.length === 0) {
+    return <Text as="p" className="text-muted-foreground">Videos are still loading...</Text>;
+  }
+  return (
+    <div className="space-y-3">
+      <Text as="p" className="text-sm text-muted-foreground mb-2">
+        Curated from YouTube — ranked by Claude for relevance to this career transition.
+      </Text>
+      {videos.map((v) => (
+        <a
+          key={v.videoId}
+          href={v.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex gap-4 p-3 border-2 border-black rounded bg-card hover:bg-accent transition-colors"
+        >
+          {v.thumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={v.thumbnailUrl}
+              alt=""
+              className="w-32 h-20 object-cover rounded border-2 border-black flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <Text as="p" className="font-head text-sm leading-snug line-clamp-2">{v.title}</Text>
+            <Text as="p" className="text-xs text-muted-foreground mt-1">
+              {v.channelTitle} · {v.duration}
+            </Text>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="h-1.5 w-20 bg-muted border border-black rounded-full overflow-hidden">
+                <div className="h-full bg-primary" style={{ width: `${v.relevanceScore}%` }} />
+              </div>
+              <Text as="p" className="text-xs">
+                {v.relevanceScore}% relevant
+              </Text>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function CoursesTab({ course }: { course: any }) {
+  if (!course || !course.moocs || course.moocs.length === 0) {
+    return <Text as="p" className="text-muted-foreground">No courses recommended yet.</Text>;
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 mb-2">
+        <Text as="p" className="text-sm text-muted-foreground">
+          Free, structured courses — all auditable at zero cost.
+        </Text>
+        <Badge size="sm" variant="outline">
+          {course.source === "curated" ? "hand-curated" : "AI-suggested"}
+        </Badge>
+      </div>
+      {course.moocs.map((m: any, i: number) => (
+        <a
+          key={i}
+          href={m.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block border-2 border-black rounded p-4 bg-card hover:bg-accent transition-colors"
+        >
+          <Text as="p" className="font-head text-lg leading-snug">{m.title}</Text>
+          <Text as="p" className="text-sm text-muted-foreground mt-1">
+            {m.provider} · {m.duration} · {m.level}
+          </Text>
+          {m.why && (
+            <Text as="p" className="mt-2 text-sm leading-relaxed">{m.why}</Text>
+          )}
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function QuizTab({
+  quiz,
+  answers,
+  submitted,
+  score,
+  onAnswer,
+  onSubmit,
+}: {
+  quiz: any[];
+  answers: Record<number, number>;
+  submitted: boolean;
+  score: number;
+  onAnswer: (q: number, a: number) => void;
+  onSubmit: () => void;
+}) {
+  if (quiz.length === 0) {
+    return <Text as="p" className="text-muted-foreground">Quiz is still generating...</Text>;
+  }
+  return (
+    <div className="space-y-5">
+      <Text as="p" className="text-sm text-muted-foreground">
+        Scenario-based questions. Test application and judgment, not memorization.
+      </Text>
+      {quiz.map((q, qi) => (
+        <div key={qi} className="border-2 border-black rounded p-4 bg-card">
+          <Text as="p" className="font-head mb-3">{qi + 1}. {q.q}</Text>
+          <div className="space-y-2">
+            {(q.options ?? []).map((opt: string, oi: number) => {
+              const selected = answers[qi] === oi;
+              const correct = oi === q.correct;
+              let style = "border-2 border-black bg-card hover:bg-accent";
+              if (submitted && correct) style = "border-2 border-emerald-500 bg-emerald-50";
+              else if (submitted && selected && !correct) style = "border-2 border-destructive bg-red-50";
+              else if (selected) style = "border-2 border-primary bg-primary/20";
+              return (
+                <button
+                  key={oi}
+                  type="button"
+                  onClick={() => onAnswer(qi, oi)}
+                  disabled={submitted}
+                  className={`block w-full text-left rounded p-3 transition-colors text-sm ${style}`}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+          {submitted && q.explanation && (
+            <div className={`mt-3 border-2 border-black rounded p-3 text-sm ${answers[qi] === q.correct ? "bg-emerald-50" : "bg-accent"}`}>
+              <span className="font-head text-xs uppercase tracking-widest mr-2">Why →</span>
+              {q.explanation}
+            </div>
+          )}
+        </div>
+      ))}
+      {!submitted && Object.keys(answers).length === quiz.length && (
+        <Button size="lg" onClick={onSubmit}>
+          Submit answers
+        </Button>
+      )}
+      {submitted && (
+        <div className="border-2 border-black rounded bg-primary/20 p-5 text-center">
+          <Text as="p" className="text-4xl font-head">{score}/{quiz.length}</Text>
+          <Text as="p" className="text-sm mt-1">
+            {score === quiz.length
+              ? "Perfect. You've got this."
+              : score >= quiz.length - 1
+              ? "Strong. Review the one you missed."
+              : "Worth a second pass at the lesson. No rush."}
+          </Text>
         </div>
       )}
     </div>
   );
 }
 
-function ProjectSection({ project }: { project: any }) {
+function ProjectTab({
+  project,
+  started,
+  onStart,
+}: {
+  project: any;
+  started: boolean;
+  onStart: () => void;
+}) {
+  if (!project) {
+    return <Text as="p" className="text-muted-foreground">Project brief still generating...</Text>;
+  }
   return (
-    <Card className="block w-full">
-      <Card.Header>
-        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
-          Capstone project · {project.estimatedHours}h · portfolio artifact
-        </Text>
-        <Text as="h3" className="text-2xl mt-2">
-          {project.title}
-        </Text>
-        {project.brief && (
-          <Text as="p" className="mt-3 leading-relaxed">
-            {project.brief}
-          </Text>
-        )}
-      </Card.Header>
-      <Card.Content>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {project.deliverables && project.deliverables.length > 0 && (
-            <div>
-              <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
-                Deliverables
-              </Text>
-              <ul className="mt-2 list-disc list-inside space-y-1 text-sm">
-                {project.deliverables.map((d: string, i: number) => (
-                  <li key={i}>{d}</li>
-                ))}
-              </ul>
-            </div>
+    <div className="space-y-4">
+      <div className="border-2 border-black rounded bg-primary/10 p-5">
+        <div className="flex flex-wrap gap-2 mb-3">
+          <Badge size="sm" variant="solid">Capstone project</Badge>
+          {project.isPortfolioArtifact && (
+            <Badge size="sm" variant="solid">Portfolio artifact</Badge>
           )}
-          {project.skillsDemonstrated && project.skillsDemonstrated.length > 0 && (
-            <div>
-              <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
-                Skills demonstrated
-              </Text>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {project.skillsDemonstrated.map((s: string, i: number) => (
-                  <Badge key={i} size="sm" variant="default">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+          <Badge size="sm" variant="solid">{project.estimatedHours}h</Badge>
         </div>
-      </Card.Content>
-    </Card>
+        <Text as="h3" className="text-2xl">{project.title}</Text>
+        {project.brief && (
+          <Text as="p" className="mt-3 leading-relaxed whitespace-pre-line">{project.brief}</Text>
+        )}
+      </div>
+
+      {project.deliverables?.length > 0 && (
+        <div className="border-2 border-black rounded bg-card p-4">
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-2">Deliverables</Text>
+          <ul className="list-disc list-inside space-y-1 text-sm">
+            {project.deliverables.map((d: string, i: number) => <li key={i}>{d}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {project.skillsDemonstrated?.length > 0 && (
+        <div className="border-2 border-black rounded bg-card p-4">
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-2">Skills demonstrated</Text>
+          <div className="flex flex-wrap gap-2">
+            {project.skillsDemonstrated.map((s: string, i: number) => (
+              <Badge key={i} size="sm" variant="default">{s}</Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="border-2 border-black rounded bg-emerald-50 p-4">
+        <Text as="p" className="text-xs uppercase tracking-widest font-head mb-1">This goes in your portfolio</Text>
+        <Text as="p" className="text-sm">
+          Your output is tangible evidence of this skill. You can show it to future employers, mentors, or programs.
+        </Text>
+      </div>
+
+      {!started ? (
+        <Button size="lg" onClick={onStart}>
+          Start project
+        </Button>
+      ) : (
+        <div className="border-2 border-dashed border-primary rounded p-6 text-center bg-primary/5">
+          <Text as="p" className="font-head">Project in progress</Text>
+          <Text as="p" className="text-sm text-muted-foreground mt-1">
+            Work at your own pace. Upload when ready.
+          </Text>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BooksTab({ books }: { books: any }) {
+  if (!books || !books.books || books.books.length === 0) {
+    return <Text as="p" className="text-muted-foreground">Books still loading...</Text>;
+  }
+  return (
+    <div className="space-y-3">
+      <Text as="p" className="text-sm text-muted-foreground mb-2">
+        Canonical and foundational texts for this field, from Google Books. Every
+        link goes to a free preview.
+      </Text>
+      {books.books.map((b: any) => (
+        <a
+          key={b.id}
+          href={b.infoLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex gap-4 p-3 border-2 border-black rounded bg-card hover:bg-accent transition-colors"
+        >
+          {b.thumbnailUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={b.thumbnailUrl}
+              alt=""
+              className="w-20 h-28 object-cover rounded border-2 border-black flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <Text as="p" className="font-head text-base leading-snug line-clamp-2">
+              {b.title}
+            </Text>
+            {b.subtitle && (
+              <Text as="p" className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                {b.subtitle}
+              </Text>
+            )}
+            {b.authors && b.authors.length > 0 && (
+              <Text as="p" className="text-sm mt-1">
+                by {b.authors.slice(0, 3).join(", ")}
+              </Text>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {b.publisher && <span>{b.publisher}</span>}
+              {b.publishedDate && <span>· {b.publishedDate.slice(0, 4)}</span>}
+              {typeof b.pageCount === "number" && b.pageCount > 0 && (
+                <span>· {b.pageCount}p</span>
+              )}
+              {typeof b.averageRating === "number" && (
+                <Badge size="sm" variant="outline">
+                  ★ {b.averageRating.toFixed(1)}
+                  {typeof b.ratingsCount === "number" ? ` (${b.ratingsCount})` : ""}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  );
+}
+
+function CommunityTab({ community }: { community: any }) {
+  if (!community) {
+    return <Text as="p" className="text-muted-foreground">Community recommendations still generating...</Text>;
+  }
+  return (
+    <div className="space-y-6">
+      {community.source === "llm" && (
+        <div className="border-2 border-black rounded bg-accent p-3">
+          <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">Heads up</Text>
+          <Text as="p" className="text-sm">
+            These are AI-suggested for careers not yet in our curated set. Verify links before joining.
+          </Text>
+        </div>
+      )}
+
+      {community.communities?.length > 0 && (
+        <div>
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-3">
+            Communities · {community.communities.length}
+          </Text>
+          <div className="space-y-2">
+            {community.communities.map((c: any, i: number) => (
+              <a
+                key={i}
+                href={c.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between border-2 border-black rounded p-3 bg-card hover:bg-accent transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <Text as="p" className="font-head text-base">{c.name}</Text>
+                  {c.why && (
+                    <Text as="p" className="text-sm text-muted-foreground mt-0.5">{c.why}</Text>
+                  )}
+                </div>
+                <Badge size="sm" variant="outline" className="ml-3 flex-shrink-0">
+                  {c.platform}
+                </Badge>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {community.people?.length > 0 && (
+        <div>
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-3">
+            People to follow · {community.people.length}
+          </Text>
+          <div className="space-y-2">
+            {community.people.map((p: any, i: number) => (
+              <a
+                key={i}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border-2 border-black rounded p-3 bg-card hover:bg-accent transition-colors"
+              >
+                <Text as="p" className="font-head">{p.name}</Text>
+                <Text as="p" className="text-sm text-muted-foreground mt-0.5">{p.context}</Text>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {community.newsletters?.length > 0 && (
+        <div>
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-3">
+            Newsletters · {community.newsletters.length}
+          </Text>
+          <div className="space-y-2">
+            {community.newsletters.map((n: any, i: number) => (
+              <a
+                key={i}
+                href={n.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border-2 border-black rounded p-3 bg-card hover:bg-accent transition-colors"
+              >
+                <Text as="p" className="font-head">{n.name}</Text>
+                {n.why && (
+                  <Text as="p" className="text-sm text-muted-foreground mt-0.5">{n.why}</Text>
+                )}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

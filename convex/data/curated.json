@@ -1,0 +1,335 @@
+{
+  "$schema": "Curated free educational resources keyed by O*NET SOC code. Phase 2 (Foundations) draws moocs[]; Phase 4 (Plug In) draws communities[], people[], newsletters[]. Course Agent and Community Agent fall back to LLM-generated entries when a SOC code isn't in this file.",
+  "soc": {
+    "15-1255.00": {
+      "title": "Web and Digital Interface Designers (UX/UI/Product)",
+      "moocs": [
+        {
+          "title": "Google UX Design Professional Certificate",
+          "provider": "Coursera (free audit)",
+          "url": "https://www.coursera.org/professional-certificates/google-ux-design",
+          "duration": "6 months at 10 hr/week",
+          "level": "Beginner",
+          "why": "The most-respected free UX certificate path. Beginners go from zero to portfolio-ready."
+        },
+        {
+          "title": "Introduction to User Experience Design",
+          "provider": "Coursera (free audit) — Georgia Tech",
+          "url": "https://www.coursera.org/learn/user-experience-design",
+          "duration": "4 weeks",
+          "level": "Beginner",
+          "why": "Strong academic introduction to UX research, prototyping, and evaluation."
+        },
+        {
+          "title": "Interaction Design Specialization",
+          "provider": "Coursera (free audit) — UC San Diego",
+          "url": "https://www.coursera.org/specializations/interaction-design",
+          "duration": "8 months at 4 hr/week",
+          "level": "Intermediate",
+          "why": "Don Norman's school. Deep dives on principles and human-centered design."
+        }
+      ],
+      "communities": [
+        { "name": "Designer Hangout", "url": "https://designerhangout.co/", "platform": "Slack", "why": "20K+ UX designers; #intros and #career-change channels are active." },
+        { "name": "r/UXDesign", "url": "https://www.reddit.com/r/userexperience/", "platform": "Reddit", "why": "Daily portfolio reviews and career-change AMAs." },
+        { "name": "ADPList", "url": "https://adplist.org/", "platform": "Web", "why": "Free 1:1 mentorship from senior designers, including from Google, Meta, Apple." },
+        { "name": "Friends of Figma", "url": "https://friends.figma.com/", "platform": "Local meetups + Discord", "why": "City-based meetups for designers. Great for IRL connection." },
+        { "name": "IxDA", "url": "https://www.ixda.org/", "platform": "Web + local chapters", "why": "Interaction Design Association — career-stage events, conference (Interaction)." }
+      ],
+      "people": [
+        { "name": "Don Norman", "context": "Author of *The Design of Everyday Things*. The foundational voice in user-centered design.", "url": "https://jnd.org/" },
+        { "name": "Julie Zhuo", "context": "Former VP Design at Facebook. Writes about design management and craft.", "url": "https://www.juliezhuo.com/" },
+        { "name": "Jared Spool", "context": "UIE founder. The most accessible educator in usability research.", "url": "https://articles.uie.com/" },
+        { "name": "Vitaly Friedman", "context": "Smashing Magazine editor. Practical UX patterns and accessibility.", "url": "https://www.smashingmagazine.com/" },
+        { "name": "Erika Hall", "context": "Mule Design partner. Writes about research and conversation design.", "url": "https://muledesign.com/" }
+      ],
+      "newsletters": [
+        { "name": "UX Collective", "url": "https://uxdesign.cc/", "why": "Daily essays from working designers. Largest UX publication on Medium." },
+        { "name": "Smashing Newsletter", "url": "https://www.smashingmagazine.com/the-smashing-newsletter/", "why": "Practical front-end and UX patterns weekly." },
+        { "name": "UX Brain Food", "url": "https://www.brainfood.uxstrategy.io/", "why": "Curated UX articles, no fluff." }
+      ]
+    },
+    "15-1252.00": {
+      "title": "Software Developers",
+      "moocs": [
+        {
+          "title": "freeCodeCamp Full-Stack Curriculum",
+          "provider": "freeCodeCamp (fully free)",
+          "url": "https://www.freecodecamp.org/learn",
+          "duration": "300+ hours",
+          "level": "Beginner to Advanced",
+          "why": "The most respected fully-free path to full-stack web development. Includes certifications and real projects."
+        },
+        {
+          "title": "CS50: Introduction to Computer Science",
+          "provider": "edX / Harvard (free audit)",
+          "url": "https://www.edx.org/course/introduction-computer-science-harvardx-cs50x",
+          "duration": "12 weeks",
+          "level": "Beginner",
+          "why": "Harvard's flagship intro CS course. Builds foundational thinking, not framework chasing."
+        },
+        {
+          "title": "Meta Front-End Developer Professional Certificate",
+          "provider": "Coursera (free audit) — Meta",
+          "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
+          "duration": "7 months",
+          "level": "Beginner to Intermediate",
+          "why": "Modern React + JavaScript stack from Meta engineers."
+        }
+      ],
+      "communities": [
+        { "name": "freeCodeCamp Forum", "url": "https://forum.freecodecamp.org/", "platform": "Web forum", "why": "Active community of self-taught developers helping each other." },
+        { "name": "Reactiflux", "url": "https://www.reactiflux.com/", "platform": "Discord", "why": "60K+ React developers. Active help channels for all levels." },
+        { "name": "r/learnprogramming", "url": "https://www.reddit.com/r/learnprogramming/", "platform": "Reddit", "why": "The career-change reddit for developers. Lots of pivot stories." },
+        { "name": "DEV Community", "url": "https://dev.to/", "platform": "Web", "why": "Beginner-friendly developer blog community." },
+        { "name": "Stack Overflow", "url": "https://stackoverflow.com/", "platform": "Web", "why": "The reference. Search before you ask." }
+      ],
+      "people": [
+        { "name": "Kent C. Dodds", "context": "Teaches modern JavaScript and React with deep depth.", "url": "https://kentcdodds.com/" },
+        { "name": "Wes Bos", "context": "Practical full-stack JavaScript courses, many free or pay-what-you-want.", "url": "https://wesbos.com/" },
+        { "name": "Dan Abramov", "context": "Co-creator of Redux and React Hooks. Writes about how things actually work.", "url": "https://overreacted.io/" },
+        { "name": "Sarah Drasner", "context": "Vue Core team alum, now at Google. Writes accessible, practical posts.", "url": "https://sarah.dev/" },
+        { "name": "Rich Harris", "context": "Creator of Svelte and Rollup. Influential voice on web framework design.", "url": "https://twitter.com/Rich_Harris" }
+      ],
+      "newsletters": [
+        { "name": "JavaScript Weekly", "url": "https://javascriptweekly.com/", "why": "Best curated JS news, weekly." },
+        { "name": "Bytes", "url": "https://bytes.dev/", "why": "Funny, well-written front-end weekly." },
+        { "name": "TLDR Newsletter", "url": "https://tldr.tech/", "why": "Daily 5-minute tech news, dev focus." }
+      ]
+    },
+    "15-2051.00": {
+      "title": "Data Scientists",
+      "moocs": [
+        {
+          "title": "IBM Data Science Professional Certificate",
+          "provider": "Coursera (free audit) — IBM",
+          "url": "https://www.coursera.org/professional-certificates/ibm-data-science",
+          "duration": "11 months at 4 hr/week",
+          "level": "Beginner",
+          "why": "Most popular free data science path. Python, SQL, ML basics."
+        },
+        {
+          "title": "Machine Learning Specialization",
+          "provider": "Coursera (free audit) — Stanford / Andrew Ng",
+          "url": "https://www.coursera.org/specializations/machine-learning-introduction",
+          "duration": "3 months",
+          "level": "Intermediate",
+          "why": "Andrew Ng's foundational ML course. Newly modernized in 2022."
+        },
+        {
+          "title": "Fast.ai Practical Deep Learning",
+          "provider": "Fast.ai (fully free)",
+          "url": "https://course.fast.ai/",
+          "duration": "10 weeks",
+          "level": "Intermediate",
+          "why": "Top-down approach. Build real models in week 1, learn theory as needed."
+        }
+      ],
+      "communities": [
+        { "name": "Kaggle", "url": "https://www.kaggle.com/", "platform": "Web", "why": "Free competitions, datasets, and notebooks. The community where data scientists actually publish work." },
+        { "name": "r/datascience", "url": "https://www.reddit.com/r/datascience/", "platform": "Reddit", "why": "Active job boards and career-change discussions." },
+        { "name": "Data Science Discord", "url": "https://discord.gg/datascience", "platform": "Discord", "why": "Active help and study groups." }
+      ],
+      "people": [
+        { "name": "Jeremy Howard", "context": "Fast.ai co-founder. Practical, project-first approach to ML.", "url": "https://www.fast.ai/" },
+        { "name": "Andrej Karpathy", "context": "Former Tesla AI director, OpenAI co-founder. Deep but accessible AI essays.", "url": "https://karpathy.github.io/" },
+        { "name": "Cassie Kozyrkov", "context": "Former Chief Decision Scientist at Google. Demystifies stats and ML for non-experts.", "url": "https://kozyrkov.medium.com/" }
+      ],
+      "newsletters": [
+        { "name": "Data Elixir", "url": "https://dataelixir.com/", "why": "Weekly curated data science links." },
+        { "name": "Import AI", "url": "https://jack-clark.net/", "why": "Jack Clark's deep AI policy + research weekly." }
+      ]
+    },
+    "27-1024.00": {
+      "title": "Graphic Designers",
+      "moocs": [
+        {
+          "title": "Graphic Design Specialization",
+          "provider": "Coursera (free audit) — CalArts",
+          "url": "https://www.coursera.org/specializations/graphic-design",
+          "duration": "6 months",
+          "level": "Beginner",
+          "why": "CalArts faculty teaching the four pillars: typography, image-making, brand, history."
+        },
+        {
+          "title": "Adobe Illustrator CC Essentials",
+          "provider": "Coursera (free audit)",
+          "url": "https://www.coursera.org/projects/adobe-illustrator-essentials",
+          "duration": "1-3 hours",
+          "level": "Beginner",
+          "why": "Quick introduction to the industry-standard tool."
+        }
+      ],
+      "communities": [
+        { "name": "r/graphic_design", "url": "https://www.reddit.com/r/graphic_design/", "platform": "Reddit", "why": "Daily portfolio crits and feedback." },
+        { "name": "Designer Slack (HQ)", "url": "https://designerhangout.co/", "platform": "Slack", "why": "Cross-pollination between graphic and UX designers." },
+        { "name": "Dribbble", "url": "https://dribbble.com/", "platform": "Web", "why": "The portfolio platform for designers. Inspiration + job board." }
+      ],
+      "people": [
+        { "name": "Aaron Draplin", "context": "DDC founder. Builds vintage-modern logo and brand work.", "url": "https://www.draplin.com/" },
+        { "name": "Jessica Walsh", "context": "Co-founder of &Walsh. Bold typography and bright graphic identity.", "url": "https://andwalsh.com/" },
+        { "name": "Stefan Sagmeister", "context": "Sagmeister & Walsh founder. Conceptual graphic design legend.", "url": "https://sagmeister.com/" }
+      ],
+      "newsletters": [
+        { "name": "Brand New", "url": "https://www.underconsideration.com/brandnew/", "why": "Daily brand identity reviews — the internet's design critique class." },
+        { "name": "Eye on Design", "url": "https://eyeondesign.aiga.org/", "why": "AIGA's design-culture publication." }
+      ]
+    },
+    "13-1082.00": {
+      "title": "Project Management Specialists",
+      "moocs": [
+        {
+          "title": "Google Project Management Professional Certificate",
+          "provider": "Coursera (free audit)",
+          "url": "https://www.coursera.org/professional-certificates/google-project-management",
+          "duration": "6 months",
+          "level": "Beginner",
+          "why": "Industry-recognized. Covers Agile, Scrum, traditional PM."
+        },
+        {
+          "title": "Foundations of Project Management",
+          "provider": "Coursera (free audit) — Google",
+          "url": "https://www.coursera.org/learn/project-management-foundations",
+          "duration": "4 weeks",
+          "level": "Beginner",
+          "why": "Standalone first course of the Google PM cert."
+        }
+      ],
+      "communities": [
+        { "name": "PMI Local Chapters", "url": "https://www.pmi.org/membership/chapters", "platform": "Local meetups", "why": "Project Management Institute — every major city has a chapter." },
+        { "name": "r/projectmanagement", "url": "https://www.reddit.com/r/projectmanagement/", "platform": "Reddit", "why": "Active career-pivot discussions." },
+        { "name": "Scrum.org", "url": "https://www.scrum.org/forum", "platform": "Forum", "why": "Authoritative Agile/Scrum community." }
+      ],
+      "people": [
+        { "name": "Mike Cohn", "context": "Mountain Goat Software founder. Wrote the book on Agile estimation.", "url": "https://www.mountaingoatsoftware.com/blog" },
+        { "name": "Elizabeth Harrin", "context": "Practical PM advice from a working program manager.", "url": "https://rebelsguidetopm.com/" }
+      ],
+      "newsletters": [
+        { "name": "PM Library", "url": "https://www.thedigitalprojectmanager.com/", "why": "Practical PM articles and templates." }
+      ]
+    },
+    "11-2021.00": {
+      "title": "Marketing Managers",
+      "moocs": [
+        {
+          "title": "Google Digital Marketing & E-commerce Certificate",
+          "provider": "Coursera (free audit)",
+          "url": "https://www.coursera.org/professional-certificates/google-digital-marketing-ecommerce",
+          "duration": "6 months",
+          "level": "Beginner",
+          "why": "Comprehensive intro to modern digital marketing — SEO, ads, analytics, e-commerce."
+        },
+        {
+          "title": "HubSpot Inbound Marketing Certification",
+          "provider": "HubSpot Academy (fully free)",
+          "url": "https://academy.hubspot.com/courses/inbound-marketing",
+          "duration": "5 hours",
+          "level": "Beginner",
+          "why": "Industry-recognized cert. Teaches content + lead-gen strategy."
+        }
+      ],
+      "communities": [
+        { "name": "GrowthHackers", "url": "https://growthhackers.com/", "platform": "Web", "why": "Active community for growth marketers. Real case studies." },
+        { "name": "r/marketing", "url": "https://www.reddit.com/r/marketing/", "platform": "Reddit", "why": "Marketing career-change discussions." },
+        { "name": "Demand Curve Slack", "url": "https://www.demandcurve.com/", "platform": "Slack", "why": "Tactical growth-marketing community." }
+      ],
+      "people": [
+        { "name": "April Dunford", "context": "Positioning expert. Author of *Obviously Awesome*.", "url": "https://www.aprildunford.com/" },
+        { "name": "Rand Fishkin", "context": "Founder of Moz and SparkToro. SEO and audience research.", "url": "https://sparktoro.com/blog" }
+      ],
+      "newsletters": [
+        { "name": "Marketing Brew", "url": "https://www.morningbrew.com/marketing", "why": "Daily marketing news, well-written." }
+      ]
+    },
+    "29-1141.00": {
+      "title": "Registered Nurses",
+      "moocs": [
+        {
+          "title": "Vital Signs: Understanding What the Body Is Telling Us",
+          "provider": "Coursera (free audit) — Penn",
+          "url": "https://www.coursera.org/learn/vital-signs",
+          "duration": "5 weeks",
+          "level": "Beginner",
+          "why": "Foundation course on patient assessment. Useful for career changers exploring nursing."
+        },
+        {
+          "title": "Anatomy Specialization",
+          "provider": "Coursera (free audit) — Michigan",
+          "url": "https://www.coursera.org/specializations/anatomy",
+          "duration": "4 months",
+          "level": "Beginner",
+          "why": "Pre-nursing anatomy fundamentals. Strong precursor to BSN coursework."
+        }
+      ],
+      "communities": [
+        { "name": "AllNurses Forum", "url": "https://allnurses.com/", "platform": "Web forum", "why": "Largest nursing community online. Career-change subforum is active." },
+        { "name": "r/nursing", "url": "https://www.reddit.com/r/nursing/", "platform": "Reddit", "why": "Active community with second-career nurses." }
+      ],
+      "people": [
+        { "name": "Theresa Brown, RN", "context": "Author of *Critical Care* and *The Shift*. Frontline RN turned nursing essayist.", "url": "https://theresabrownrn.com/" }
+      ],
+      "newsletters": [
+        { "name": "Nurse.org Newsletter", "url": "https://nurse.org/", "why": "Career-focused nursing news and salary data." }
+      ]
+    },
+    "25-2021.00": {
+      "title": "Elementary School Teachers",
+      "moocs": [
+        {
+          "title": "Foundations of Teaching for Learning",
+          "provider": "Coursera (free audit) — Commonwealth Education Trust",
+          "url": "https://www.coursera.org/specializations/teaching-learning",
+          "duration": "8 months",
+          "level": "Beginner",
+          "why": "Cross-cultural foundations of pedagogy. Suited for career changers entering teaching."
+        }
+      ],
+      "communities": [
+        { "name": "r/Teachers", "url": "https://www.reddit.com/r/Teachers/", "platform": "Reddit", "why": "Active community of working teachers, including career changers." },
+        { "name": "Teachers Pay Teachers", "url": "https://www.teacherspayteachers.com/", "platform": "Web", "why": "Marketplace + community for K-12 educators." }
+      ],
+      "people": [
+        { "name": "Jennifer Gonzalez", "context": "Cult of Pedagogy founder. Practical, evidence-based teaching strategies.", "url": "https://www.cultofpedagogy.com/" },
+        { "name": "Doug Lemov", "context": "*Teach Like a Champion* author. Specific teaching technique playbook.", "url": "https://teachlikeachampion.org/" }
+      ],
+      "newsletters": [
+        { "name": "Edutopia", "url": "https://www.edutopia.org/newsletter", "why": "Free practical teaching strategies, K-12." }
+      ]
+    }
+  },
+  "fallback": {
+    "title": "Generic free educational resources (used when SOC code is not curated)",
+    "moocs": [
+      {
+        "title": "OpenCourseWare Search",
+        "provider": "MIT OCW (fully free)",
+        "url": "https://ocw.mit.edu/search/",
+        "duration": "Self-paced",
+        "level": "Varies",
+        "why": "Search MIT's catalog of free course materials by topic."
+      },
+      {
+        "title": "Coursera Free Course Catalog",
+        "provider": "Coursera (free audit only)",
+        "url": "https://www.coursera.org/courses?query=free",
+        "duration": "Varies",
+        "level": "Varies",
+        "why": "Filter Coursera courses to audit-only / free options."
+      },
+      {
+        "title": "edX Free Course Catalog",
+        "provider": "edX (free audit)",
+        "url": "https://www.edx.org/learn?free=on",
+        "duration": "Varies",
+        "level": "Varies",
+        "why": "edX's free-to-audit course catalog from accredited universities."
+      }
+    ],
+    "communities": [
+      { "name": "Reddit", "url": "https://www.reddit.com/", "platform": "Reddit", "why": "Search 'r/<your career>' — most fields have an active subreddit." },
+      { "name": "LinkedIn Groups", "url": "https://www.linkedin.com/groups/", "platform": "LinkedIn", "why": "Career-specific professional groups." }
+    ],
+    "people": [],
+    "newsletters": []
+  }
+}

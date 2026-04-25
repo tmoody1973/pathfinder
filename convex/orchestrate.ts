@@ -8,6 +8,9 @@ import { runSkillDiffAgent, type SkillDiffResult } from "./agents/skillDiff";
 import { runLessonAgent } from "./agents/lesson";
 import { runResourceAgent } from "./agents/resource";
 import { runAssessmentAgent } from "./agents/assessment";
+import { runCourseAgent } from "./agents/course";
+import { runCommunityAgent } from "./agents/community";
+import { runBooksAgent } from "./agents/books";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -40,7 +43,7 @@ export const run = internalAction({
   handler: async (ctx, { pathId }): Promise<void> => {
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-    // Pre-create agentRuns rows so the UI shows all four tiles immediately
+    // Pre-create agentRuns rows so the UI shows all six tiles immediately
     const skillDiffRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
       pathId,
       agent: "skillDiff",
@@ -56,6 +59,18 @@ export const run = internalAction({
     const assessmentRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
       pathId,
       agent: "assessment",
+    });
+    const courseRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "course",
+    });
+    const communityRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "community",
+    });
+    const booksRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "books",
     });
 
     let skillDiff: SkillDiffResult;
@@ -97,7 +112,7 @@ export const run = internalAction({
       }).catch(() => {});
 
       // skillDiff is the gate. Mark all downstream agents as skipped, fail the path.
-      for (const id of [lessonRunId, resourceRunId, assessmentRunId]) {
+      for (const id of [lessonRunId, resourceRunId, assessmentRunId, courseRunId, communityRunId, booksRunId]) {
         await ctx.runMutation(internal.agentRuns.markError, {
           runId: id,
           errorMessage: "Skipped — skill-diff gate failed",
@@ -112,7 +127,7 @@ export const run = internalAction({
       return;
     }
 
-    // === Phase 2: Lesson + Resource + Assessment in parallel ===
+    // === Phase 2: five content agents in parallel ===
     const lessonPromise = runAgentSettled(
       ctx,
       lessonRunId,
@@ -131,12 +146,34 @@ export const run = internalAction({
       "assessment",
       () => withTimeout(runAssessmentAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "assessment"),
     );
+    const coursePromise = runAgentSettled(
+      ctx,
+      courseRunId,
+      "course",
+      () => withTimeout(runCourseAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "course"),
+    );
+    const communityPromise = runAgentSettled(
+      ctx,
+      communityRunId,
+      "community",
+      () => withTimeout(runCommunityAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "community"),
+    );
+    const booksPromise = runAgentSettled(
+      ctx,
+      booksRunId,
+      "books",
+      () => withTimeout(runBooksAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "books"),
+    );
 
-    const [lessonResult, resourceResult, assessmentResult] = await Promise.all([
-      lessonPromise,
-      resourcePromise,
-      assessmentPromise,
-    ]);
+    const [lessonResult, resourceResult, assessmentResult, courseResult, communityResult, booksResult] =
+      await Promise.all([
+        lessonPromise,
+        resourcePromise,
+        assessmentPromise,
+        coursePromise,
+        communityPromise,
+        booksPromise,
+      ]);
 
     // === Phase 3: Aggregate into modules row ===
     try {
@@ -147,6 +184,9 @@ export const run = internalAction({
         videos: resourceResult?.videos ?? undefined,
         quiz: assessmentResult?.quiz ?? undefined,
         project: assessmentResult?.project ?? undefined,
+        course: courseResult ?? undefined,
+        community: communityResult ?? undefined,
+        books: booksResult ?? undefined,
         cached: false,
       });
     } catch (err) {
