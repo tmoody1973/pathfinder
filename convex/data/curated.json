@@ -6,26 +6,38 @@
       "moocs": [
         {
           "title": "Google UX Design Professional Certificate",
-          "provider": "Coursera (free audit)",
+          "provider": "Coursera — Google",
           "url": "https://www.coursera.org/professional-certificates/google-ux-design",
           "duration": "6 months at 10 hr/week",
           "level": "Beginner",
+          "auditCost": "Free (audit only — no cert, no graded work)",
+          "certCost": "$59/mo (~$354 total at 6mo pace)",
+          "placementSignal": "Strong — Google reports >75% report career impact within 6mo. Recognized by Big Tech recruiters as a credible entry-level signal IF paired with a 3-project portfolio.",
+          "recommendation": "Audit for learning; pay for cert ONLY if you also commit to building 2-3 portfolio projects. Cert alone won't get interviews.",
           "why": "The most-respected free UX certificate path. Beginners go from zero to portfolio-ready."
         },
         {
           "title": "Introduction to User Experience Design",
-          "provider": "Coursera (free audit) — Georgia Tech",
+          "provider": "Coursera — Georgia Tech",
           "url": "https://www.coursera.org/learn/user-experience-design",
           "duration": "4 weeks",
           "level": "Beginner",
+          "auditCost": "Free",
+          "certCost": "$49/mo (~$49 if completed in one month)",
+          "placementSignal": "Foundational — academic intro. Won't move a hiring decision; useful as Phase 1 vocabulary builder.",
+          "recommendation": "Audit only. Don't pay for the cert; no employer-recognition value above audit-only learning.",
           "why": "Strong academic introduction to UX research, prototyping, and evaluation."
         },
         {
           "title": "Interaction Design Specialization",
-          "provider": "Coursera (free audit) — UC San Diego",
+          "provider": "Coursera — UC San Diego",
           "url": "https://www.coursera.org/specializations/interaction-design",
           "duration": "8 months at 4 hr/week",
           "level": "Intermediate",
+          "auditCost": "Free per course (8 courses)",
+          "certCost": "$49/mo (~$392 over 8 months)",
+          "placementSignal": "Medium — UCSD branding helps academically-minded employers. Strongest signal is the specialization capstone (a real artifact).",
+          "recommendation": "Audit course 1-2 first. If hooked, the capstone artifact is what makes the cost worth it — not the cert itself.",
           "why": "Don Norman's school. Deep dives on principles and human-centered design."
         }
       ],
@@ -54,26 +66,38 @@
       "moocs": [
         {
           "title": "freeCodeCamp Full-Stack Curriculum",
-          "provider": "freeCodeCamp (fully free)",
+          "provider": "freeCodeCamp",
           "url": "https://www.freecodecamp.org/learn",
           "duration": "300+ hours",
           "level": "Beginner to Advanced",
+          "auditCost": "Fully free",
+          "certCost": "Free (yes, free certificates with real project requirements)",
+          "placementSignal": "Strong — Quincy Larson's reporting shows ~6,000+ certified grads/yr, many with FAANG offers. Real projects (not multiple-choice) make the certs credible.",
+          "recommendation": "The single most-defensible free path. No reason to pay for an alternative.",
           "why": "The most respected fully-free path to full-stack web development. Includes certifications and real projects."
         },
         {
           "title": "CS50: Introduction to Computer Science",
-          "provider": "edX / Harvard (free audit)",
+          "provider": "edX — Harvard",
           "url": "https://www.edx.org/course/introduction-computer-science-harvardx-cs50x",
           "duration": "12 weeks",
           "level": "Beginner",
+          "auditCost": "Free",
+          "certCost": "$199 (HarvardX verified certificate)",
+          "placementSignal": "Strong for fundamentals — David Malan's CS50 brand is recognized. Best signal: completing it shows you can hold complexity.",
+          "recommendation": "Audit first. Pay only if you want Harvard branding on LinkedIn — the learning is the same either way.",
           "why": "Harvard's flagship intro CS course. Builds foundational thinking, not framework chasing."
         },
         {
           "title": "Meta Front-End Developer Professional Certificate",
-          "provider": "Coursera (free audit) — Meta",
+          "provider": "Coursera — Meta",
           "url": "https://www.coursera.org/professional-certificates/meta-front-end-developer",
           "duration": "7 months",
           "level": "Beginner to Intermediate",
+          "auditCost": "Free (audit only)",
+          "certCost": "$59/mo (~$413 total at 7mo pace)",
+          "placementSignal": "Medium — Meta brand has weight; cert alone gets interviews when paired with a portfolio. Without portfolio: weak signal.",
+          "recommendation": "Audit if you have time. The cert is worth paying ONLY if you've already committed to web dev as your direction.",
           "why": "Modern React + JavaScript stack from Meta engineers."
         }
       ],
@@ -102,26 +126,38 @@
       "moocs": [
         {
           "title": "IBM Data Science Professional Certificate",
-          "provider": "Coursera (free audit) — IBM",
+          "provider": "Coursera — IBM",
           "url": "https://www.coursera.org/professional-certificates/ibm-data-science",
           "duration": "11 months at 4 hr/week",
           "level": "Beginner",
+          "auditCost": "Free per course (10 courses)",
+          "certCost": "$59/mo (~$649 total at 11mo pace)",
+          "placementSignal": "Medium — IBM brand on LinkedIn helps. Without a portfolio of Kaggle work or real projects, cert alone is weak.",
+          "recommendation": "Audit. If sticking with data sci, build 2-3 Kaggle portfolio projects; THEN consider paying for the cert.",
           "why": "Most popular free data science path. Python, SQL, ML basics."
         },
         {
           "title": "Machine Learning Specialization",
-          "provider": "Coursera (free audit) — Stanford / Andrew Ng",
+          "provider": "Coursera — Stanford / Andrew Ng",
           "url": "https://www.coursera.org/specializations/machine-learning-introduction",
           "duration": "3 months",
           "level": "Intermediate",
+          "auditCost": "Free per course",
+          "certCost": "$49/mo (~$147 total)",
+          "placementSignal": "Strong — Stanford + Andrew Ng is the gold-standard ML credential. Hiring managers see this and pay attention.",
+          "recommendation": "Worth the cert cost if you're committed to ML/AI track. Otherwise audit.",
           "why": "Andrew Ng's foundational ML course. Newly modernized in 2022."
         },
         {
           "title": "Fast.ai Practical Deep Learning",
-          "provider": "Fast.ai (fully free)",
+          "provider": "Fast.ai",
           "url": "https://course.fast.ai/",
           "duration": "10 weeks",
           "level": "Intermediate",
+          "auditCost": "Fully free",
+          "certCost": "Free (no certificate; project-based)",
+          "placementSignal": "Strong with portfolio — Fast.ai grads ship real models. Hiring managers value the GitHub work, not a credential.",
+          "recommendation": "Single best free deep learning path. Output: published models on GitHub > certificate.",
           "why": "Top-down approach. Build real models in week 1, learn theory as needed."
         }
       ],
@@ -145,18 +181,26 @@
       "moocs": [
         {
           "title": "Graphic Design Specialization",
-          "provider": "Coursera (free audit) — CalArts",
+          "provider": "Coursera — CalArts",
           "url": "https://www.coursera.org/specializations/graphic-design",
           "duration": "6 months",
           "level": "Beginner",
+          "auditCost": "Free per course (5 courses)",
+          "certCost": "$49/mo (~$294 total)",
+          "placementSignal": "Medium — CalArts brand helps academically. Real signal: portfolio of completed assignments. Cert alone is weak without that.",
+          "recommendation": "Audit, complete the assignments anyway, build portfolio from them. Cert is optional.",
           "why": "CalArts faculty teaching the four pillars: typography, image-making, brand, history."
         },
         {
           "title": "Adobe Illustrator CC Essentials",
-          "provider": "Coursera (free audit)",
+          "provider": "Coursera",
           "url": "https://www.coursera.org/projects/adobe-illustrator-essentials",
           "duration": "1-3 hours",
           "level": "Beginner",
+          "auditCost": "Free",
+          "certCost": "Project completion certificate (free)",
+          "placementSignal": "Foundational only — tool fluency, not portfolio. Useful before doing real work in Illustrator.",
+          "recommendation": "Free, do it. Just a quick tool primer.",
           "why": "Quick introduction to the industry-standard tool."
         }
       ],
@@ -180,18 +224,26 @@
       "moocs": [
         {
           "title": "Google Project Management Professional Certificate",
-          "provider": "Coursera (free audit)",
+          "provider": "Coursera — Google",
           "url": "https://www.coursera.org/professional-certificates/google-project-management",
           "duration": "6 months",
           "level": "Beginner",
+          "auditCost": "Free per course (6 courses)",
+          "certCost": "$59/mo (~$354 total)",
+          "placementSignal": "Strong — Google brand + structured curriculum. Recognized by HR systems as a real credential.",
+          "recommendation": "Worth the cert cost if you're committed to PM. Pair with one real project at your current job to put on your resume.",
           "why": "Industry-recognized. Covers Agile, Scrum, traditional PM."
         },
         {
           "title": "Foundations of Project Management",
-          "provider": "Coursera (free audit) — Google",
+          "provider": "Coursera — Google",
           "url": "https://www.coursera.org/learn/project-management-foundations",
           "duration": "4 weeks",
           "level": "Beginner",
+          "auditCost": "Free",
+          "certCost": "$49 one course",
+          "placementSignal": "Foundational — first course of the larger Google PM cert.",
+          "recommendation": "Audit only. If you want the credential, take the full specialization above instead.",
           "why": "Standalone first course of the Google PM cert."
         }
       ],
@@ -213,18 +265,26 @@
       "moocs": [
         {
           "title": "Google Digital Marketing & E-commerce Certificate",
-          "provider": "Coursera (free audit)",
+          "provider": "Coursera — Google",
           "url": "https://www.coursera.org/professional-certificates/google-digital-marketing-ecommerce",
           "duration": "6 months",
           "level": "Beginner",
+          "auditCost": "Free per course (7 courses)",
+          "certCost": "$59/mo (~$354 total)",
+          "placementSignal": "Strong — fastest-growing of the Google certs. Recognized by digital marketing recruiters.",
+          "recommendation": "Audit first. If sticking with marketing, the cert is worth it; pair with running a real campaign (even small).",
           "why": "Comprehensive intro to modern digital marketing — SEO, ads, analytics, e-commerce."
         },
         {
           "title": "HubSpot Inbound Marketing Certification",
-          "provider": "HubSpot Academy (fully free)",
+          "provider": "HubSpot Academy",
           "url": "https://academy.hubspot.com/courses/inbound-marketing",
           "duration": "5 hours",
           "level": "Beginner",
+          "auditCost": "Fully free",
+          "certCost": "Free (yes, free certification on completion)",
+          "placementSignal": "Strong for content/inbound roles — HubSpot tooling is industry-standard. Cert is free and shows up well on LinkedIn.",
+          "recommendation": "Do it. Free cert with actual hiring weight.",
           "why": "Industry-recognized cert. Teaches content + lead-gen strategy."
         }
       ],
@@ -246,18 +306,26 @@
       "moocs": [
         {
           "title": "Vital Signs: Understanding What the Body Is Telling Us",
-          "provider": "Coursera (free audit) — Penn",
+          "provider": "Coursera — Penn",
           "url": "https://www.coursera.org/learn/vital-signs",
           "duration": "5 weeks",
           "level": "Beginner",
+          "auditCost": "Free",
+          "certCost": "$49 one-time",
+          "placementSignal": "Foundational — exploratory only. RN credentialing requires NCLEX + accredited program; no MOOC qualifies.",
+          "recommendation": "Audit for exploration. If committed to nursing, your real path is an accredited BSN/ADN program.",
           "why": "Foundation course on patient assessment. Useful for career changers exploring nursing."
         },
         {
           "title": "Anatomy Specialization",
-          "provider": "Coursera (free audit) — Michigan",
+          "provider": "Coursera — Michigan",
           "url": "https://www.coursera.org/specializations/anatomy",
           "duration": "4 months",
           "level": "Beginner",
+          "auditCost": "Free per course",
+          "certCost": "$49/mo (~$196 total)",
+          "placementSignal": "Foundational — pre-nursing prep. Doesn't substitute for accredited prerequisites.",
+          "recommendation": "Audit. Useful before applying to BSN programs but not a credential employers count.",
           "why": "Pre-nursing anatomy fundamentals. Strong precursor to BSN coursework."
         }
       ],
@@ -277,10 +345,14 @@
       "moocs": [
         {
           "title": "Foundations of Teaching for Learning",
-          "provider": "Coursera (free audit) — Commonwealth Education Trust",
+          "provider": "Coursera — Commonwealth Education Trust",
           "url": "https://www.coursera.org/specializations/teaching-learning",
           "duration": "8 months",
           "level": "Beginner",
+          "auditCost": "Free per course",
+          "certCost": "$49/mo (~$392 total)",
+          "placementSignal": "Foundational — exploratory. State teaching credential is required for K-12; no MOOC substitutes.",
+          "recommendation": "Audit only. Real path is a state-approved alternative-cert program if pivoting from another career.",
           "why": "Cross-cultural foundations of pedagogy. Suited for career changers entering teaching."
         }
       ],
@@ -302,26 +374,38 @@
     "moocs": [
       {
         "title": "OpenCourseWare Search",
-        "provider": "MIT OCW (fully free)",
+        "provider": "MIT OCW",
         "url": "https://ocw.mit.edu/search/",
         "duration": "Self-paced",
         "level": "Varies",
+        "auditCost": "Fully free",
+        "certCost": "No certificates issued",
+        "placementSignal": "Foundational only — no credential. Best for self-directed learning before committing to a paid program.",
+        "recommendation": "Free. Use when you want to verify interest before paying for a structured cert.",
         "why": "Search MIT's catalog of free course materials by topic."
       },
       {
         "title": "Coursera Free Course Catalog",
-        "provider": "Coursera (free audit only)",
+        "provider": "Coursera",
         "url": "https://www.coursera.org/courses?query=free",
         "duration": "Varies",
         "level": "Varies",
+        "auditCost": "Free per course (audit)",
+        "certCost": "$49-79/mo for verified track (varies)",
+        "placementSignal": "Varies wildly by program — Google/Meta/IBM Professional Certificates carry real weight. University courses without those brand partners are foundational only.",
+        "recommendation": "Audit first. Pay for cert only when the program has a known-strong placement signal (Google/Meta/IBM partner certs).",
         "why": "Filter Coursera courses to audit-only / free options."
       },
       {
         "title": "edX Free Course Catalog",
-        "provider": "edX (free audit)",
+        "provider": "edX",
         "url": "https://www.edx.org/learn?free=on",
         "duration": "Varies",
         "level": "Varies",
+        "auditCost": "Free per course (audit)",
+        "certCost": "$50-300 per course for verified track",
+        "placementSignal": "Varies — MIT and Harvard branded courses on edX carry real weight. Others are foundational.",
+        "recommendation": "Audit first. Pay only for the courses where the issuing institution adds resume value.",
         "why": "edX's free-to-audit course catalog from accredited universities."
       }
     ],

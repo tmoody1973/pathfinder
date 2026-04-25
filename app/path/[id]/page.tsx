@@ -633,28 +633,74 @@ function CoursesTab({ course }: { course: any }) {
     <div className="space-y-3">
       <div className="flex items-center gap-2 mb-2">
         <Text as="p" className="text-sm text-muted-foreground">
-          Free, structured courses — all auditable at zero cost.
+          Honest ROI: audit cost vs. cert cost vs. real hiring signal — for each.
         </Text>
         <Badge size="sm" variant="outline">
           {course.source === "curated" ? "hand-curated" : "AI-suggested"}
         </Badge>
       </div>
       {course.moocs.map((m: any, i: number) => (
-        <a
+        <div
           key={i}
-          href={m.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block border-2 border-black rounded p-4 bg-card hover:bg-accent transition-colors"
+          className="block border-2 border-black rounded bg-card overflow-hidden"
         >
-          <Text as="p" className="font-head text-lg leading-snug">{m.title}</Text>
-          <Text as="p" className="text-sm text-muted-foreground mt-1">
-            {m.provider} · {m.duration} · {m.level}
-          </Text>
-          {m.why && (
-            <Text as="p" className="mt-2 text-sm leading-relaxed">{m.why}</Text>
+          <a
+            href={m.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block p-4 hover:bg-accent transition-colors"
+          >
+            <Text as="p" className="font-head text-lg leading-snug">{m.title}</Text>
+            <Text as="p" className="text-sm text-muted-foreground mt-1">
+              {m.provider} · {m.duration} · {m.level}
+            </Text>
+            {m.why && (
+              <Text as="p" className="mt-2 text-sm leading-relaxed">{m.why}</Text>
+            )}
+          </a>
+
+          {/* ROI block — honest cost + signal disclosure */}
+          {(m.auditCost || m.certCost || m.placementSignal || m.recommendation) && (
+            <div className="border-t-2 border-black bg-muted/50 px-4 py-3 space-y-1.5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                {m.auditCost && (
+                  <div>
+                    <span className="font-head uppercase tracking-widest text-muted-foreground">
+                      Audit:{" "}
+                    </span>
+                    {m.auditCost}
+                  </div>
+                )}
+                {m.certCost && (
+                  <div>
+                    <span className="font-head uppercase tracking-widest text-muted-foreground">
+                      Cert:{" "}
+                    </span>
+                    {m.certCost}
+                  </div>
+                )}
+                {m.placementSignal && (
+                  <div className="md:col-span-1">
+                    <span className="font-head uppercase tracking-widest text-muted-foreground">
+                      Signal:{" "}
+                    </span>
+                    {m.placementSignal.split(/\s—\s/)[0]}
+                  </div>
+                )}
+              </div>
+              {m.placementSignal && m.placementSignal.includes("—") && (
+                <p className="text-xs text-foreground/70 leading-snug">
+                  {m.placementSignal.split(/\s—\s/).slice(1).join(" — ")}
+                </p>
+              )}
+              {m.recommendation && (
+                <p className="text-xs leading-snug pt-1">
+                  <span className="font-head">→</span> {m.recommendation}
+                </p>
+              )}
+            </div>
           )}
-        </a>
+        </div>
       ))}
     </div>
   );

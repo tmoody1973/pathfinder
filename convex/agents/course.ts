@@ -22,11 +22,15 @@ import curatedData from "../data/curated.json";
 
 export interface MoocEntry {
   title: string;
-  provider: string;       // e.g. "Coursera (free audit) — Stanford"
+  provider: string;       // e.g. "Coursera — Stanford"
   url: string;
   duration: string;       // e.g. "6 months at 10 hr/week"
   level: string;          // Beginner | Intermediate | Advanced | Varies
   why: string;            // 1-line case for why this fits
+  auditCost?: string;     // ROI: cost to AUDIT (just learn). E.g. "Free" | "Free per course"
+  certCost?: string;      // ROI: cost to get the CERTIFICATE. E.g. "$59/mo (~$354 total)" | "Free" | "No cert"
+  placementSignal?: string; // ROI: 1-line on whether the cert actually moves a hiring decision
+  recommendation?: string;  // ROI: explicit "audit first" / "pay for cert if X" / etc.
 }
 
 export interface CourseResult {
@@ -67,6 +71,16 @@ Only provide a specific course URL when you are CERTAIN it exists. Examples you 
 
 For ANYTHING ELSE, produce a search URL. Title the entry "<Provider>: search for <topic>" and link to the platform search URL with the relevant query.
 
+CRITICAL — INCLUDE HONEST ROI FIELDS for every MOOC. Career changers are deciding whether to spend money. Be direct:
+  - auditCost: cost to audit (just learn the content) — usually "Free" or "Free per course"
+  - certCost: REAL cost to get the credential — never just say "free" if it requires a paid verified track. Use patterns like "$59/mo (~$354 at 6mo pace)" for Coursera; "$199" for edX verified; "Free" only if the cert is actually free (e.g. freeCodeCamp, HubSpot)
+  - placementSignal: 1-line on whether the cert actually moves a hiring decision. Be honest:
+      "Strong — recognized by Big Tech recruiters, especially with portfolio"
+      "Medium — brand helps but cert alone won't get interviews"
+      "Foundational only — exploration, not a credential employers count"
+      "Portfolio-first: build artifacts, not credentials"
+  - recommendation: explicit guidance: "Audit first; pay for cert only if X" / "Worth the cert cost because Y" / etc.
+
 Tone: each "why" sentence is direct, specific, and tells the learner what they'll get.
 
 Return ONLY valid JSON:
@@ -74,10 +88,14 @@ Return ONLY valid JSON:
   "moocs": [
     {
       "title": "Real course title OR '<Provider>: search for <topic>' if uncertain",
-      "provider": "Provider — explicit free pathway",
+      "provider": "Provider — branded source (e.g. 'Coursera — Google', 'edX — Harvard', 'freeCodeCamp')",
       "url": "https://... — must be a real, verifiable URL (specific course OR platform search)",
       "duration": "e.g. 6 weeks at 4 hr/week OR 'Self-paced' for search results",
       "level": "Beginner | Intermediate | Advanced | Varies",
+      "auditCost": "e.g. 'Free' | 'Free per course'",
+      "certCost": "e.g. '$59/mo (~$354 total)' | 'Free' | 'No cert' | '$199 one-time'",
+      "placementSignal": "Strong | Medium | Foundational | Portfolio-first — with 1-line context",
+      "recommendation": "Explicit advice: 'Audit only' / 'Worth the cert because X' / 'Audit first; pay only if committed'",
       "why": "One sentence on why it fits this career change."
     }
   ]
@@ -141,6 +159,10 @@ Return only JSON.`;
       duration: String(m.duration ?? "Self-paced"),
       level: String(m.level ?? "Varies"),
       why: String(m.why ?? ""),
+      auditCost: m.auditCost ? String(m.auditCost) : undefined,
+      certCost: m.certCost ? String(m.certCost) : undefined,
+      placementSignal: m.placementSignal ? String(m.placementSignal) : undefined,
+      recommendation: m.recommendation ? String(m.recommendation) : undefined,
     }));
 
     return { moocs, source: "llm", socCode };
