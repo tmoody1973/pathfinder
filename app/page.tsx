@@ -19,6 +19,7 @@ export default function Home() {
   const [targetCareer, setTargetCareer] = useState("");
   const [hoursPerWeek, setHoursPerWeek] = useState("5");
   const [city, setCity] = useState("");
+  const [currentSalaryK, setCurrentSalaryK] = useState("");
   const [profileText, setProfileText] = useState("");
   const [profileExpanded, setProfileExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +34,9 @@ export default function Home() {
       const hours = parseInt(hoursPerWeek, 10);
       const cityTrim = city.trim();
       const profileTrim = profileText.trim();
+      const salaryK = parseInt(currentSalaryK.trim(), 10);
+      const currentSalary =
+        Number.isFinite(salaryK) && salaryK > 0 ? salaryK * 1000 : undefined;
       const pathId = await createPath({
         anonymousId,
         currentCareer: currentCareer.trim(),
@@ -40,6 +44,7 @@ export default function Home() {
         hoursPerWeek: Number.isFinite(hours) && hours > 0 ? hours : undefined,
         city: cityTrim.length > 0 ? cityTrim : undefined,
         profileText: profileTrim.length > 0 ? profileTrim : undefined,
+        currentSalary,
       });
       router.push(`/path/${pathId}`);
     } catch (err) {
@@ -135,6 +140,32 @@ export default function Home() {
                   Salary data gets local. Skip for national medians.
                 </Text>
               </div>
+            </div>
+
+            <div>
+              <Label htmlFor="salary">
+                Your current annual salary (optional)
+              </Label>
+              <div className="mt-1.5 flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">$</span>
+                <Input
+                  id="salary"
+                  type="number"
+                  min="0"
+                  max="10000"
+                  step="5"
+                  value={currentSalaryK}
+                  onChange={(e) => setCurrentSalaryK(e.target.value)}
+                  placeholder="135"
+                  disabled={submitting}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">K / year</span>
+              </div>
+              <Text as="p" className="text-xs text-muted-foreground mt-1">
+                Personalizes the lift math. The lift number reflects YOUR pay,
+                not the median. Skip if you&apos;d rather see medians.
+              </Text>
             </div>
 
             {/* Profile / résumé paste — collapsible to keep the form short */}

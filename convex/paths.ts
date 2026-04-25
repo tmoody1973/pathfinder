@@ -25,6 +25,7 @@ export const createPath = mutation({
     hoursPerWeek: v.optional(v.number()),
     city: v.optional(v.string()),
     profileText: v.optional(v.string()),
+    currentSalary: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Id<"paths">> => {
     const currentTrim = args.currentCareer.trim();
@@ -78,6 +79,13 @@ export const createPath = mutation({
         ? profileTrim.slice(0, 8000)
         : undefined;
 
+    // Sanity-clamp salary to $0-$10M annual (catches both raw dollars and
+    // accidental K/M suffixes via parseInt).
+    const currentSalary =
+      typeof args.currentSalary === "number" && Number.isFinite(args.currentSalary)
+        ? Math.max(0, Math.min(10_000_000, Math.round(args.currentSalary)))
+        : undefined;
+
     const now = Date.now();
     const pathId = await ctx.db.insert("paths", {
       sessionId: session._id,
@@ -89,6 +97,7 @@ export const createPath = mutation({
       hoursPerWeek,
       city,
       profileText,
+      currentSalary,
       createdAt: now,
     });
 

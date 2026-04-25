@@ -184,7 +184,8 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
         )}
 
         {/* Salary + outlook panel — Sonar (city-specific, cited) preferred,
-            Opus baseline as fallback */}
+            Opus baseline as fallback. When user provided their actual salary,
+            lift math personalizes (and may go negative — we handle that honestly). */}
         {(() => {
           const sonarSalary = moduleDoc?.salary;
           const opusCurrent = skillDiffOutput?.currentSalary;
@@ -196,6 +197,7 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
               currentTitle={path.currentCareer}
               targetTitle={path.targetCareer}
               city={path.city}
+              userSalary={path.currentSalary}
               sonarSalary={sonarSalary}
               opusCurrent={opusCurrent}
               opusTarget={opusTarget}
@@ -419,6 +421,7 @@ function SalaryPanel({
   currentTitle,
   targetTitle,
   city,
+  userSalary,
   sonarSalary,
   opusCurrent,
   opusTarget,
@@ -426,6 +429,7 @@ function SalaryPanel({
   currentTitle: string;
   targetTitle: string;
   city?: string;
+  userSalary?: number; // user's actual annual salary in USD if provided
   sonarSalary?: any;
   opusCurrent?: any;
   opusTarget?: any;
@@ -453,15 +457,21 @@ function SalaryPanel({
       }
     : opusTarget;
 
+  // If the user supplied their actual salary, use it as the comparison anchor
+  // instead of the median. This is the honest math: most people aren't median.
+  const usingUserSalary = typeof userSalary === "number" && userSalary > 0;
+  const anchorSalary = usingUserSalary ? userSalary : current?.medianSalary;
+
   const lift =
-    typeof current?.medianSalary === "number" &&
+    typeof anchorSalary === "number" &&
     typeof target?.medianSalary === "number"
-      ? target.medianSalary - current.medianSalary
+      ? target.medianSalary - anchorSalary
       : null;
   const liftPct =
-    lift !== null && current?.medianSalary
-      ? Math.round((lift / current.medianSalary) * 100)
+    lift !== null && anchorSalary
+      ? Math.round((lift / anchorSalary) * 100)
       : null;
+  const isNegative = lift !== null && lift < 0;
 
   return (
     <div className="mt-5 border-2 border-black rounded p-4 bg-card">
@@ -484,12 +494,17 @@ function SalaryPanel({
         {/* From */}
         <div className="border-2 border-black rounded p-3 bg-muted/40">
           <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
-            From: {currentTitle}
+            {usingUserSalary ? `Your salary (${currentTitle})` : `From: ${currentTitle}`}
           </Text>
           <Text as="p" className="font-head text-2xl">
-            {formatSalary(current?.medianSalary)}
+            {formatSalary(anchorSalary)}
           </Text>
-          {current?.salaryRange && (
+          {usingUserSalary && current?.medianSalary && (
+            <Text as="p" className="text-xs text-muted-foreground mt-0.5">
+              vs {formatSalary(current.medianSalary)} national median
+            </Text>
+          )}
+          {!usingUserSalary && current?.salaryRange && (
             <Text as="p" className="text-xs text-muted-foreground mt-0.5">
               {current.salaryRange}
             </Text>
@@ -506,29 +521,44 @@ function SalaryPanel({
           )}
         </div>
 
-        {/* Lift */}
-        <div className="border-2 border-black rounded p-3 bg-primary/30 flex flex-col justify-center items-center text-center">
+        {/* Lift / Change — handles negative deltas honestly */}
+        <div
+          className={`border-2 border-black rounded p-3 flex flex-col justify-center items-center text-center ${
+            isNegative ? "bg-destructive/10" : "bg-primary/30"
+          }`}
+        >
           <Text as="p" className="text-xs uppercase tracking-widest font-head mb-1">
-            Annual lift
+            {isNegative ? "Annual change (cut)" : "Annual lift"}
           </Text>
           <Text
             as="p"
-            className={`font-head text-3xl ${lift !== null && lift > 0 ? "" : "text-muted-foreground"}`}
+            className={`font-head text-3xl ${
+              isNegative
+                ? "text-destructive"
+                : lift !== null && lift > 0
+                  ? ""
+                  : "text-muted-foreground"
+            }`}
           >
             {lift !== null
-              ? `${lift > 0 ? "+" : ""}${formatSalary(Math.abs(lift))}`
+              ? `${lift > 0 ? "+" : ""}${lift < 0 ? "−" : ""}${formatSalary(Math.abs(lift))}`
               : "—"}
           </Text>
           {liftPct !== null && (
             <Text as="p" className="text-xs mt-0.5">
               {liftPct > 0 ? "+" : ""}
-              {liftPct}% vs current
+              {liftPct}% vs your current
             </Text>
           )}
           {lift !== null && lift > 0 && (
             <Text as="p" className="text-xs mt-2 leading-snug">
-              A $354 Google UX cert = ~{Math.ceil((354 / lift) * 365)} days of new
-              salary to break even.
+              A $354 cert = ~{Math.ceil((354 / lift) * 365)} days of new salary to recoup.
+            </Text>
+          )}
+          {isNegative && (
+            <Text as="p" className="text-xs mt-2 leading-snug">
+              Salary thoughts? Ask the counselor — your situation might warrant a
+              different target or timeline.
             </Text>
           )}
         </div>
