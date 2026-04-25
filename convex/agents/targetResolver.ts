@@ -51,6 +51,14 @@ export interface TargetResolverOutput {
   thinProfile: boolean;
   /** One-line read on the user's situation, used as the modal headline. */
   oneLineRead: string;
+  /**
+   * Inferred current career from the profile text. The form has a current-career
+   * field that gets auto-filled when the user picks a suggestion. Without this,
+   * the form thinks the user is starting from "" which breaks the bridge build.
+   * Modern phrasing preferred (e.g. "Senior Records Administrator" not
+   * "Federal employee"). Empty string if profile was too thin to infer.
+   */
+  inferredCurrentCareer: string;
   suggestions: TargetSuggestion[];
 }
 
@@ -76,12 +84,14 @@ NON-NEGOTIABLE RULES:
    If genuinely unsure, return "".
 5. firstStep is a concrete, doable-this-week action. Examples: "Spend 2 hours on a Figma file recreating one screen of an app you use daily", "Find 3 Product Manager job posts and write the bullet points YOU could already claim from your current role", "DM 2 Customer Success Managers on LinkedIn for a 15-min coffee call". Not generic ("research the field", "take a course").
 6. If the profile is < 200 chars or has almost no signal (e.g. "Manager at Company"), set thinProfile: true. Suggestions in that case must explicitly say "with this thin profile, here's a likely direction — paste more for a sharper read".
-7. oneLineRead is your honest read of who this person is and where they sit. One sentence. Examples: "You're a senior accountant with weekend Figma habits — design careers are not as far as you think." "You're 5 years into product marketing and clearly want to be closer to the build side."
+7. oneLineRead is your honest read of who this person is and where they sit. One sentence. Examples: "You're a senior accountant with weekend Figma habits, design careers are not as far as you think." "You're 5 years into product marketing and clearly want to be closer to the build side."
+8. inferredCurrentCareer is the modern, concise title that best describes what this person currently does, extracted from the profile. Use modern phrasing (e.g. "Senior Records Administrator" not "Federal Government Employee"; "Customer Service Team Lead" not "Customer Service Representative II"). One title only. Empty string if profile is too thin to infer.
 
 OUTPUT FORMAT — return ONLY a JSON object, no prose, no markdown:
 {
   "thinProfile": boolean,
   "oneLineRead": string,
+  "inferredCurrentCareer": string,
   "suggestions": [
     {
       "title": string,
@@ -153,6 +163,10 @@ export async function resolveTargetCareer(
       typeof parsed.oneLineRead === "string" && parsed.oneLineRead.trim().length > 0
         ? parsed.oneLineRead.trim()
         : "Here are three directions worth considering.",
+    inferredCurrentCareer:
+      typeof parsed.inferredCurrentCareer === "string"
+        ? parsed.inferredCurrentCareer.trim()
+        : "",
     suggestions: cleaned,
   };
 }

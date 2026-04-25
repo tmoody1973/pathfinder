@@ -71,6 +71,9 @@ export default function Home() {
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
   const [discoveryRead, setDiscoveryRead] = useState<string | null>(null);
   const [discoveryThin, setDiscoveryThin] = useState(false);
+  // Captured from the resolver so pickSuggestion can auto-fill the current
+  // career field when the user pasted a LinkedIn instead of typing it.
+  const [discoveryCurrentCareer, setDiscoveryCurrentCareer] = useState("");
   const [discoverySuggestions, setDiscoverySuggestions] = useState<
     DiscoverySuggestion[] | null
   >(null);
@@ -109,6 +112,7 @@ export default function Home() {
     setDiscoveryError(null);
     setDiscoveryRead(null);
     setDiscoveryThin(false);
+    setDiscoveryCurrentCareer("");
     setDiscoverySuggestions(null);
   }
 
@@ -134,6 +138,7 @@ export default function Home() {
       } else {
         setDiscoveryRead(result.result.oneLineRead);
         setDiscoveryThin(result.result.thinProfile);
+        setDiscoveryCurrentCareer(result.result.inferredCurrentCareer ?? "");
         setDiscoverySuggestions(result.result.suggestions);
       }
     } catch (err) {
@@ -146,6 +151,16 @@ export default function Home() {
 
   function pickSuggestion(suggestion: DiscoverySuggestion) {
     setTargetCareer(suggestion.title);
+    // Auto-fill current career from the resolver's inference if the user
+    // hasn't typed one. Without this, picking a suggestion after pasting a
+    // LinkedIn left the current-career field empty, and the bridge build
+    // would be missing one half of the pair.
+    if (
+      discoveryCurrentCareer.trim().length > 0 &&
+      currentCareer.trim().length === 0
+    ) {
+      setCurrentCareer(discoveryCurrentCareer.trim());
+    }
     // Carry the discovery profile + interests into the main form so the bridge
     // pipeline (lesson agent + counselor) can personalize against them.
     if (discoverProfile.trim().length > 0 && profileText.trim().length === 0) {

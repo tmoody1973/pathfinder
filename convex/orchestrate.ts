@@ -42,11 +42,13 @@ const AGENT_TIMEOUT_MS = 30_000;
 // that scale takes 30-60s. Give it 90s of headroom; the rest of the pipeline
 // fans out in parallel after, so a slower skillDiff doesn't slow the demo.
 const SKILL_DIFF_TIMEOUT_MS = 90_000;
-// Description is Sonnet 4.6 producing ~3000 tokens of dense structured JSON
-// across 9 sections (day-in-life, tools, ladder, trade-offs, pathways, etc.).
-// Routinely 25-50s. Run in parallel with everything else so the longer
-// timeout doesn't block the demo — other tabs render as their agents finish.
-const DESCRIPTION_TIMEOUT_MS = 60_000;
+// Description (now on Haiku 4.5 with a tightened prompt; was Sonnet originally).
+// Generating ~1500 tokens of structured JSON across 9 sections. Should
+// complete in 15-30s under normal Anthropic load, but during demo crunch
+// or rate-limit pressure can spike to 60-90s. 120s gives genuine headroom
+// without holding up the rest of the pipeline (description runs in parallel
+// with the other content agents, so a slow description doesn't slow them).
+const DESCRIPTION_TIMEOUT_MS = 120_000;
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
