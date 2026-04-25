@@ -178,6 +178,16 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
 
+        {/* Salary + outlook panel — answers "is this worth it?" with real numbers */}
+        {skillDiffOutput && (skillDiffOutput.currentSalary || skillDiffOutput.targetSalary) && (
+          <SalaryPanel
+            currentTitle={path.currentCareer}
+            targetTitle={path.targetCareer}
+            current={skillDiffOutput.currentSalary}
+            target={skillDiffOutput.targetSalary}
+          />
+        )}
+
         {/* Full path outline — all 4 phases × 10-12 modules. Click any module
             to generate it on-demand. Generated modules switch the content
             below; locked modules trigger a new generation. */}
@@ -219,6 +229,131 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
         )}
       </div>
     </main>
+  );
+}
+
+/* ===== Salary + outlook panel — top-of-page "is this worth it?" math ===== */
+
+function formatSalary(n?: number): string {
+  if (!n || !Number.isFinite(n)) return "—";
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  return `$${Math.round(n / 1000)}K`;
+}
+
+function SalaryPanel({
+  currentTitle,
+  targetTitle,
+  current,
+  target,
+}: {
+  currentTitle: string;
+  targetTitle: string;
+  current?: any;
+  target?: any;
+}) {
+  const lift =
+    typeof current?.medianSalary === "number" &&
+    typeof target?.medianSalary === "number"
+      ? target.medianSalary - current.medianSalary
+      : null;
+  const liftPct =
+    lift !== null && current?.medianSalary
+      ? Math.round((lift / current.medianSalary) * 100)
+      : null;
+
+  return (
+    <div className="mt-5 border-2 border-black rounded p-4 bg-card">
+      <div className="flex items-baseline justify-between flex-wrap gap-2 mb-3">
+        <Text as="p" className="text-xs uppercase tracking-widest font-head">
+          Salary + outlook
+        </Text>
+        <Text as="p" className="text-xs text-muted-foreground">
+          National median (US) · BLS-aligned
+        </Text>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* From */}
+        <div className="border-2 border-black rounded p-3 bg-muted/40">
+          <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+            From: {currentTitle}
+          </Text>
+          <Text as="p" className="font-head text-2xl">
+            {formatSalary(current?.medianSalary)}
+          </Text>
+          {current?.salaryRange && (
+            <Text as="p" className="text-xs text-muted-foreground mt-0.5">
+              {current.salaryRange}
+            </Text>
+          )}
+          {current?.outlookGrowth && (
+            <Text as="p" className="text-xs mt-1.5">
+              <span className="font-head">Outlook:</span> {current.outlookGrowth}
+            </Text>
+          )}
+          {current?.entryEducation && (
+            <Text as="p" className="text-xs text-muted-foreground mt-0.5">
+              Entry: {current.entryEducation}
+            </Text>
+          )}
+        </div>
+
+        {/* Lift */}
+        <div className="border-2 border-black rounded p-3 bg-primary/30 flex flex-col justify-center items-center text-center">
+          <Text as="p" className="text-xs uppercase tracking-widest font-head mb-1">
+            Annual lift
+          </Text>
+          <Text
+            as="p"
+            className={`font-head text-3xl ${lift !== null && lift > 0 ? "" : "text-muted-foreground"}`}
+          >
+            {lift !== null
+              ? `${lift > 0 ? "+" : ""}${formatSalary(Math.abs(lift))}`
+              : "—"}
+          </Text>
+          {liftPct !== null && (
+            <Text as="p" className="text-xs mt-0.5">
+              {liftPct > 0 ? "+" : ""}
+              {liftPct}% vs current
+            </Text>
+          )}
+          {lift !== null && lift > 0 && (
+            <Text as="p" className="text-xs mt-2 leading-snug">
+              A $354 Google UX cert = ~{Math.ceil((354 / lift) * 365)} days of new
+              salary to break even.
+            </Text>
+          )}
+        </div>
+
+        {/* To */}
+        <div className="border-2 border-black rounded p-3 bg-emerald-100">
+          <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+            To: {targetTitle}
+          </Text>
+          <Text as="p" className="font-head text-2xl">
+            {formatSalary(target?.medianSalary)}
+          </Text>
+          {target?.salaryRange && (
+            <Text as="p" className="text-xs text-muted-foreground mt-0.5">
+              {target.salaryRange}
+            </Text>
+          )}
+          {target?.outlookGrowth && (
+            <Text as="p" className="text-xs mt-1.5">
+              <span className="font-head">Outlook:</span> {target.outlookGrowth}
+            </Text>
+          )}
+          {target?.entryEducation && (
+            <Text as="p" className="text-xs text-muted-foreground mt-0.5">
+              Entry: {target.entryEducation}
+            </Text>
+          )}
+        </div>
+      </div>
+      <Text as="p" className="text-xs text-muted-foreground mt-2">
+        Numbers are national US medians from Claude&apos;s training-time BLS knowledge —
+        location-specific data via Perplexity Sonar coming next.
+      </Text>
+    </div>
   );
 }
 

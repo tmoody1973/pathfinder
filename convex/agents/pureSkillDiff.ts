@@ -21,6 +21,7 @@ import type {
   PathOutline,
   PathOutlinePhase,
   PathOutlineModule,
+  CareerSalaryProfile,
 } from "./skillDiff";
 import type { ONetCompetency } from "../lib/onet";
 import type { SemanticLookupResult } from "../lib/onetFuzzy";
@@ -94,6 +95,10 @@ Return ONLY valid JSON with this exact shape:
     "title": "concise modern label for this career",
     "profileNote": "1 sentence describing the 2026 version of this role",
     "socHint": "closest O*NET SOC code (e.g. 27-3011.00) — best guess, needed for downstream course/community lookup even if imperfect",
+    "medianSalary": <US national median annual salary in USD as a number, based on BLS data — your training-time knowledge is fine>,
+    "salaryRange": "string e.g. '$45K – $98K (10th–90th percentile)' — BLS-style percentile range",
+    "outlookGrowth": "string e.g. '5% (faster than average)' or '0% (no change)' or '-3% (declining)' — 10-year projected job growth per BLS",
+    "entryEducation": "Typical entry-level education per BLS, e.g. 'High school diploma' | 'Bachelor's degree' | 'Associate's degree' | 'Apprenticeship'",
     "knowledge": [{ "name": "...", "importance": 0-100, "level": 0-100 }, ...],
     "skills": [{ "name": "...", "importance": 0-100, "level": 0-100 }, ...]
   },
@@ -101,6 +106,10 @@ Return ONLY valid JSON with this exact shape:
     "title": "concise modern label",
     "profileNote": "1 sentence describing the 2026 version",
     "socHint": "closest O*NET SOC code",
+    "medianSalary": <number>,
+    "salaryRange": "string",
+    "outlookGrowth": "string",
+    "entryEducation": "string",
     "knowledge": [...],
     "skills": [...]
   },
@@ -308,6 +317,8 @@ Produce the full structured analysis per the system prompt. Return only JSON.`;
       String(target.profileNote ?? ""),
       String(target.socHint ?? ""),
     ),
+    currentSalary: extractSalaryProfile(current),
+    targetSalary: extractSalaryProfile(target),
     diff: {
       gainedKnowledge,
       sharedKnowledge,
@@ -327,6 +338,18 @@ Produce the full structured analysis per the system prompt. Return only JSON.`;
         clamp(toNumber(headline.estimatedHours), 2, 8) || 4,
     },
     pathOutline: normalizePathOutline(parsed.pathOutline),
+  };
+}
+
+function extractSalaryProfile(raw: any): CareerSalaryProfile | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const median = toNumber(raw.medianSalary);
+  if (!Number.isFinite(median) || median <= 0) return undefined;
+  return {
+    medianSalary: Math.round(median),
+    salaryRange: String(raw.salaryRange ?? ""),
+    outlookGrowth: String(raw.outlookGrowth ?? ""),
+    entryEducation: String(raw.entryEducation ?? ""),
   };
 }
 

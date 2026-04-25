@@ -45,10 +45,23 @@ export interface PathOutline {
   phases: PathOutlinePhase[];
 }
 
+export interface CareerSalaryProfile {
+  medianSalary: number;          // US national median annual salary in USD
+  salaryRange: string;           // e.g. "$45K – $98K (10th–90th percentile)"
+  outlookGrowth: string;         // e.g. "23% (much faster than average)"
+  entryEducation: string;        // e.g. "Bachelor's degree"
+}
+
 export interface SkillDiffResult {
   // Resolution outputs
   current: SemanticLookupResult;
   target: SemanticLookupResult;
+
+  // Salary + outlook profiles (Opus produces these alongside the skill diff,
+  // grounded in its BLS training data — accurate enough for demo, swap to
+  // real BLS API for production).
+  currentSalary?: CareerSalaryProfile;
+  targetSalary?: CareerSalaryProfile;
 
   // Deterministic diff
   diff: CareerDiff;
