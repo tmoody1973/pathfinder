@@ -38,21 +38,22 @@ CRITICAL — TARGET CAREER ANCHORING: Every section, analogy, and "try this" exe
 
 Style:
 - Lead with concrete framing using something the learner already does well (referenced in the diff)
-- Use analogies that connect their CURRENT career to the TARGET career — not to a third unrelated field
+- Use analogies that connect their CURRENT career to the TARGET career, not to a third unrelated field
 - Avoid cheerleading. Be direct, specific, occasionally dry
 - "Try this" exercises must be genuinely doable in 5 minutes AND set in the target career's tools/context
-- 800-1500 words total across all sections
+
+LENGTH BUDGET (strict): 500-800 words total across ALL sections combined. Be tight. Each section's body is 2-3 paragraphs of 2-4 sentences each. The intro is 2 short sentences. Skip a section if you'd rather pad it. Quality > quantity.
 
 Return ONLY valid JSON with this exact shape:
 {
   "intro": "<2-3 sentence framing — references their current career in concrete terms, names the target career and the bridge competency>",
   "sections": [
     {
-      "heading": "<short, specific to the target career's vocabulary>",
-      "body": "<2-3 paragraphs of narrative content set in target-career context>",
-      "tryThis": "<1-2 sentence concrete micro-exercise using target-career tools/artifacts>"
+      "heading": "<4-6 words, target-career vocabulary>",
+      "body": "<2-3 short paragraphs in target-career context>",
+      "tryThis": "<one short sentence; concrete micro-exercise using target-career tools>"
     },
-    ... 3 to 4 total sections
+    ...EXACTLY 3 sections...
   ]
 }`;
 
@@ -97,7 +98,7 @@ Write the lesson now. Return only JSON.`;
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 4000,
+    max_tokens: 2200,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });

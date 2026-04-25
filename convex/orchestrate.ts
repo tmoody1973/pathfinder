@@ -36,7 +36,12 @@ import type { Id } from "./_generated/dataModel";
  * Errors at any phase: set path.status = "error", record reason, still clear inFlight.
  */
 
-const AGENT_TIMEOUT_MS = 30_000;
+// Bumped from 30s to 60s. Anthropic API tonight is generating at 40-80
+// tokens/sec for structured JSON output (vs the typical 80-150). Agents
+// like lesson and books that produce 2000+ tokens were hitting the 30s
+// wall consistently. 60s gives genuine headroom under load without
+// blocking the rest of the parallel pipeline.
+const AGENT_TIMEOUT_MS = 60_000;
 // Skill Diff is the only Opus 4.7 call AND it now produces both the skill
 // profiles + the full 12-module pathOutline (~6000 output tokens). Opus at
 // that scale takes 30-60s. Give it 90s of headroom; the rest of the pipeline
