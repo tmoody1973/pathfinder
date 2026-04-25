@@ -24,6 +24,7 @@ export interface CounselorContext {
   city?: string;
   hoursPerWeek?: number;
   profileText?: string;
+  interests?: string;
   bridge?: {
     primaryBridge: string;
     framing: string;
@@ -80,6 +81,10 @@ function buildContextBlock(ctx: CounselorContext): string {
     lines.push(`- Hours/week available: ${ctx.hoursPerWeek}`);
   if (ctx.profileText)
     lines.push(`- Profile (LinkedIn/résumé):\n  """\n${ctx.profileText.slice(0, 4000)}\n  """`);
+  if (ctx.interests)
+    lines.push(
+      `- What they actually enjoy (their words):\n  """\n${ctx.interests.slice(0, 1500)}\n  """\n  When their answer connects to their interests, name the interest. Don't be generic about it.`,
+    );
   if (ctx.bridge) {
     lines.push(`- Primary bridge competency: ${ctx.bridge.primaryBridge}`);
     lines.push(`- Module topic: ${ctx.bridge.moduleTopic}`);
@@ -134,4 +139,51 @@ export async function askCounselor(
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
+}
+
+/**
+ * Streaming variant — Sonnet emits tokens as it generates them. The caller
+ * provides an `onProgress` callback that gets the cumulative text so far
+ * (not deltas), throttled by the caller's choice. Returns the final full text.
+ *
+ * Why cumulative text instead of deltas: the counselor.ts action patches a
+ * Convex doc with the running content, and patches need the FULL text each
+ * time (Convex doesn't have appender mutations for strings). Pushing the
+ * accumulator through saves one .join() per flush in the caller.
+ */
+export async function askCounselorStreaming(
+  anthropic: Anthropic,
+  context: CounselorContext,
+  history: CounselorMessage[],
+  userMessage: string,
+  onProgress: (cumulativeText: string) => Promise<void> | void,
+): Promise<string> {
+  const systemPrompt = `${SYSTEM_PROMPT_BASE}\n\n${buildContextBlock(context)}`;
+
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: userMessage },
+  ];
+
+  const stream = anthropic.messages.stream({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1500,
+    system: systemPrompt,
+    messages,
+  });
+
+  let accumulator = "";
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      accumulator += event.delta.text;
+      // Caller throttles. We invoke on every delta so the caller's clock
+      // drives flush cadence, not the model's emission rate.
+      await onProgress(accumulator);
+    }
+  }
+
+  return accumulator;
 }

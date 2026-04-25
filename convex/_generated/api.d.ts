@@ -14,14 +14,17 @@ import type * as agents_books from "../agents/books.js";
 import type * as agents_community from "../agents/community.js";
 import type * as agents_counselor from "../agents/counselor.js";
 import type * as agents_course from "../agents/course.js";
+import type * as agents_description from "../agents/description.js";
 import type * as agents_lesson from "../agents/lesson.js";
 import type * as agents_news from "../agents/news.js";
 import type * as agents_pureSkillDiff from "../agents/pureSkillDiff.js";
 import type * as agents_resource from "../agents/resource.js";
 import type * as agents_salary from "../agents/salary.js";
 import type * as agents_skillDiff from "../agents/skillDiff.js";
+import type * as agents_targetResolver from "../agents/targetResolver.js";
 import type * as counselor from "../counselor.js";
 import type * as counselorMessages from "../counselorMessages.js";
+import type * as discover from "../discover.js";
 import type * as lib_googleBooks from "../lib/googleBooks.js";
 import type * as lib_onet from "../lib/onet.js";
 import type * as lib_onetFuzzy from "../lib/onetFuzzy.js";
@@ -32,6 +35,7 @@ import type * as modules from "../modules.js";
 import type * as orchestrate from "../orchestrate.js";
 import type * as paths from "../paths.js";
 import type * as sessions from "../sessions.js";
+import type * as voice from "../voice.js";
 
 import type {
   ApiFromModules,
@@ -46,14 +50,17 @@ declare const fullApi: ApiFromModules<{
   "agents/community": typeof agents_community;
   "agents/counselor": typeof agents_counselor;
   "agents/course": typeof agents_course;
+  "agents/description": typeof agents_description;
   "agents/lesson": typeof agents_lesson;
   "agents/news": typeof agents_news;
   "agents/pureSkillDiff": typeof agents_pureSkillDiff;
   "agents/resource": typeof agents_resource;
   "agents/salary": typeof agents_salary;
   "agents/skillDiff": typeof agents_skillDiff;
+  "agents/targetResolver": typeof agents_targetResolver;
   counselor: typeof counselor;
   counselorMessages: typeof counselorMessages;
+  discover: typeof discover;
   "lib/googleBooks": typeof lib_googleBooks;
   "lib/onet": typeof lib_onet;
   "lib/onetFuzzy": typeof lib_onetFuzzy;
@@ -64,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   orchestrate: typeof orchestrate;
   paths: typeof paths;
   sessions: typeof sessions;
+  voice: typeof voice;
 }>;
 
 /**

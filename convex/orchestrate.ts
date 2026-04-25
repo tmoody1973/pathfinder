@@ -18,6 +18,7 @@ import { runCommunityAgent } from "./agents/community";
 import { runBooksAgent } from "./agents/books";
 import { runNewsAgent } from "./agents/news";
 import { runSalaryAgent } from "./agents/salary";
+import { runDescriptionAgent } from "./agents/description";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -40,6 +41,11 @@ const AGENT_TIMEOUT_MS = 30_000;
 // that scale takes 30-60s. Give it 90s of headroom; the rest of the pipeline
 // fans out in parallel after, so a slower skillDiff doesn't slow the demo.
 const SKILL_DIFF_TIMEOUT_MS = 90_000;
+// Description is Sonnet 4.6 producing ~3000 tokens of dense structured JSON
+// across 9 sections (day-in-life, tools, ladder, trade-offs, pathways, etc.).
+// Routinely 25-50s. Run in parallel with everything else so the longer
+// timeout doesn't block the demo — other tabs render as their agents finish.
+const DESCRIPTION_TIMEOUT_MS = 60_000;
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -91,6 +97,10 @@ export const run = internalAction({
     const salaryRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
       pathId,
       agent: "salary",
+    });
+    const descriptionRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "description",
     });
 
     const path = await ctx.runQuery(internal.paths.getInternal, { pathId });
@@ -155,11 +165,16 @@ export const run = internalAction({
     }
 
     // === Phase 2: five content agents in parallel ===
+    const lessonExtras = {
+      profileText: path.profileText,
+      interests: path.interests,
+      hoursPerWeek: path.hoursPerWeek,
+    };
     const lessonPromise = runAgentSettled(
       ctx,
       lessonRunId,
       "lesson",
-      () => withTimeout(runLessonAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "lesson"),
+      () => withTimeout(runLessonAgent(anthropic, skillDiff, lessonExtras), AGENT_TIMEOUT_MS, "lesson"),
     );
     const resourcePromise = runAgentSettled(
       ctx,
@@ -212,6 +227,12 @@ export const run = internalAction({
           "salary",
         ),
     );
+    const descriptionPromise = runAgentSettled(
+      ctx,
+      descriptionRunId,
+      "description",
+      () => withTimeout(runDescriptionAgent(anthropic, skillDiff), DESCRIPTION_TIMEOUT_MS, "description"),
+    );
 
     const [
       lessonResult,
@@ -222,6 +243,7 @@ export const run = internalAction({
       booksResult,
       newsResult,
       salaryResult,
+      descriptionResult,
     ] = await Promise.all([
       lessonPromise,
       resourcePromise,
@@ -231,6 +253,7 @@ export const run = internalAction({
       booksPromise,
       newsPromise,
       salaryPromise,
+      descriptionPromise,
     ]);
 
     // === Phase 3: Aggregate into modules row ===
@@ -257,6 +280,7 @@ export const run = internalAction({
         books: booksResult ?? undefined,
         news: newsResult ?? undefined,
         salary: salaryResult ?? undefined,
+        description: descriptionResult ?? undefined,
         cached: false,
       });
     } catch (err) {
@@ -440,7 +464,15 @@ export const generateForModule = internalAction({
     });
 
     const lessonPromise = runAgentSettled(ctx, lessonRunId, "lesson", () =>
-      withTimeout(runLessonAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "lesson"),
+      withTimeout(
+        runLessonAgent(anthropic, specialized, {
+          profileText: path.profileText,
+          interests: path.interests,
+          hoursPerWeek: path.hoursPerWeek,
+        }),
+        AGENT_TIMEOUT_MS,
+        "lesson",
+      ),
     );
     const resourcePromise = runAgentSettled(ctx, resourceRunId, "resource", () =>
       withTimeout(runResourceAgent(anthropic, specialized), AGENT_TIMEOUT_MS, "resource"),

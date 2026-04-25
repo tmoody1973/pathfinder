@@ -40,3 +40,41 @@ body {
   color: var(--color-foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Hero agent-pipeline preview animation
+   ---------------------------------------
+   Each tile cycles pending → running → done over an 8s loop. Per-tile
+   --delay variable staggers them so the whole pipeline visually fans out,
+   matching what the user sees during a real path generation. */
+.agent-tile-anim {
+  animation: tilecycle 8s ease-in-out infinite;
+  animation-delay: var(--tile-delay, 0s);
+  background: rgba(0, 0, 0, 0.06);
+}
+@keyframes tilecycle {
+  0%, 10% {
+    background: rgba(0, 0, 0, 0.06);
+  }
+  15%, 35% {
+    background: #ffd34e;
+  }
+  40%, 100% {
+    background: #bbf7d0;
+  }
+}
+.agent-tile-anim .agent-tile-status {
+  animation: statusswap 8s ease-in-out infinite;
+  animation-delay: var(--tile-delay, 0s);
+  opacity: 0.4;
+}
+@keyframes statusswap {
+  0%, 12% {
+    opacity: 0.4;
+  }
+  15%, 35% {
+    opacity: 0.8;
+  }
+  40%, 100% {
+    opacity: 1;
+  }
+}

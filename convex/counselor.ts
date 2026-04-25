@@ -4,7 +4,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal, api } from "./_generated/api";
 import Anthropic from "@anthropic-ai/sdk";
-import { askCounselor, type CounselorContext, type CounselorMessage } from "./agents/counselor";
+import { askCounselorStreaming, type CounselorContext, type CounselorMessage } from "./agents/counselor";
 
 /**
  * Public action: ask the counselor a question. Persists the user message,
@@ -46,6 +46,7 @@ export const ask = action({
         city: path.city ?? undefined,
         hoursPerWeek: path.hoursPerWeek ?? undefined,
         profileText: path.profileText ?? undefined,
+        interests: path.interests ?? undefined,
         bridge: skillDiff?.headline
           ? {
               primaryBridge: String(skillDiff.headline.primaryBridge?.name ?? ""),
@@ -84,12 +85,51 @@ export const ask = action({
         .map((m) => ({ role: m.role, content: m.content }));
 
       const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-      const reply = await askCounselor(anthropic, context, history, trimmed);
 
-      await ctx.runMutation(internal.counselorMessages.appendMessage, {
-        pathId,
-        role: "assistant",
+      // Seat an empty assistant message NOW so the UI shows a blank bubble
+      // appearing under the user's message immediately. Sonnet's tokens patch
+      // this row's content as they arrive — feels like ChatGPT type-out.
+      const messageId = await ctx.runMutation(
+        internal.counselorMessages.insertEmptyAssistant,
+        { pathId },
+      );
+
+      // Throttle Convex patches to ~250ms. Sonnet emits ~30-60 tokens/sec;
+      // patching every token would be 30-60 mutations/sec/user — wasteful.
+      // 250ms gives a smooth 4 fps streaming feel without burning mutations.
+      let lastFlushAt = 0;
+      const FLUSH_INTERVAL_MS = 250;
+
+      const reply = await askCounselorStreaming(
+        anthropic,
+        context,
+        history,
+        trimmed,
+        async (cumulativeText) => {
+          const now = Date.now();
+          if (now - lastFlushAt < FLUSH_INTERVAL_MS) return;
+          lastFlushAt = now;
+          await ctx.runMutation(internal.counselorMessages.updateMessageContent, {
+            messageId,
+            content: cumulativeText,
+          });
+        },
+      );
+
+      // Final patch with the complete text — covers anything between the
+      // last throttled flush and the stream's end-of-message event.
+      await ctx.runMutation(internal.counselorMessages.updateMessageContent, {
+        messageId,
         content: reply,
+      });
+
+      // Fire-and-forget TTS synthesis. ElevenLabs runs in a separate action
+      // so this counselor.ask returns immediately. The UI subscribes to the
+      // message via live query and auto-plays the audio when the URL lands
+      // (typically 1-3s after text streams complete).
+      await ctx.scheduler.runAfter(0, internal.voice.synthesize, {
+        text: reply,
+        messageId,
       });
 
       return { ok: true };

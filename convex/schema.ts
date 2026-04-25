@@ -34,6 +34,7 @@ export default defineSchema({
     hoursPerWeek: v.optional(v.number()),  // user-stated time availability — re-paces the path
     city: v.optional(v.string()),  // user's city/metro for location-specific salary lookup
     profileText: v.optional(v.string()),  // pasted LinkedIn About+Experience or resume — personalizes the bridge
+    interests: v.optional(v.string()),  // free-text "what I actually enjoy" — flows to counselor + lesson narrative
     currentSalary: v.optional(v.number()),  // user's actual current annual salary — personalizes salary lift math vs median
     title: v.optional(v.string()),  // user-editable nickname for this path, defaults to "current → target"
     status: v.union(
@@ -65,6 +66,7 @@ export default defineSchema({
       v.literal("books"),
       v.literal("news"),
       v.literal("salary"),
+      v.literal("description"),
     ),
     status: v.union(
       v.literal("pending"),
@@ -81,10 +83,13 @@ export default defineSchema({
 
   // Counselor chat: messages persisted per path so the user can refresh
   // mid-conversation without losing context. Anonymous-session-scoped.
+  // audioUrl is populated by voice.synthesize after TTS completes (assistant
+  // messages only) — UI plays this when the user has voice mode on.
   counselorMessages: defineTable({
     pathId: v.id("paths"),
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
+    audioUrl: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_path", ["pathId"]),
 
@@ -104,6 +109,7 @@ export default defineSchema({
     books: v.optional(v.any()),
     news: v.optional(v.any()),
     salary: v.optional(v.any()),
+    description: v.optional(v.any()),
     cached: v.boolean(),
     createdAt: v.number(),
   })

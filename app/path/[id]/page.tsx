@@ -17,6 +17,7 @@ import {
   TabsTrigger,
   TabsTriggerList,
 } from "@/components/retroui/Tab";
+import ReactMarkdown from "react-markdown";
 
 const AGENT_LABELS: Record<string, string> = {
   skillDiff: "Skill Diff · Opus 4.7",
@@ -27,6 +28,7 @@ const AGENT_LABELS: Record<string, string> = {
   community: "Community · Haiku 4.5",
   books: "Books · Haiku + Google Books",
   news: "News · Sonar (live web)",
+  description: "About this career · Sonnet 4.6",
   audio: "Audio · Haiku + ElevenLabs",
 };
 
@@ -62,6 +64,10 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
     : featuredNumber;
 
   const moduleDoc = useQuery(api.modules.getByNumber, { pathId, moduleNumber: activeModuleNumber });
+  // Featured module always carries the target-career description + news. The
+  // About tab pulls from this so it shows the same content regardless of which
+  // module the user is viewing (description is target-career-level, not module-level).
+  const featuredDoc = useQuery(api.modules.getForPath, { pathId });
 
   function selectModule(n: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -171,21 +177,23 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
           );
         })()}
 
-        {/* Career resolution strip — concise */}
-        {(path.currentReasoning || path.targetReasoning) && (
-          <div className="mt-5 text-xs text-foreground/70 bg-accent border-2 border-black rounded px-3 py-2">
-            {path.currentReasoning && (
-              <div><span className="font-head">From:</span> {path.currentReasoning}</div>
-            )}
-            {path.targetReasoning && (
-              <div className="mt-0.5"><span className="font-head">To:</span> {path.targetReasoning}</div>
-            )}
+        {/* Bridge framing moved UP — this is the headline emotional content,
+            shouldn't be buried below pipeline. Renders as a quote-style card,
+            not a labeled-section card, so it reads as the page's thesis. */}
+        {skillDiffOutput?.headline?.framing && (
+          <div className="mt-5 border-l-4 border-black pl-4">
+            <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-1">
+              Why this bridge
+            </Text>
+            <Text as="p" className="text-base md:text-lg leading-relaxed font-medium">
+              {skillDiffOutput.headline.framing}
+            </Text>
           </div>
         )}
 
-        {/* Salary + outlook panel — Sonar (city-specific, cited) preferred,
-            Opus baseline as fallback. When user provided their actual salary,
-            lift math personalizes (and may go negative — we handle that honestly). */}
+        {/* Salary + outlook panel — collapses to a compact strip after the
+            path is done so the second-visit user doesn't lose 250px to data
+            they already saw. */}
         {(() => {
           const sonarSalary = moduleDoc?.salary;
           const opusCurrent = skillDiffOutput?.currentSalary;
@@ -201,13 +209,14 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
               sonarSalary={sonarSalary}
               opusCurrent={opusCurrent}
               opusTarget={opusTarget}
+              pathStatus={path.status}
             />
           );
         })()}
 
-        {/* Full path outline — all 4 phases × 10-12 modules. Click any module
-            to generate it on-demand. Generated modules switch the content
-            below; locked modules trigger a new generation. */}
+        {/* Full path outline — collapses to a compact strip after done.
+            Collapsed view shows current phase + module count so users still
+            know where they are without losing 400px. */}
         {path.pathOutline && (
           <PathOutlineView
             outline={path.pathOutline}
@@ -215,30 +224,19 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
             generatedNumbers={new Set((generatedList ?? []).map((m) => m.moduleNumber))}
             activeNumber={activeModuleNumber}
             onModuleClick={onModuleClick}
+            pathStatus={path.status}
           />
         )}
 
-        {/* Progress / agent fan-out */}
+        {/* Agent pipeline — visible during generation (the demo wow), then
+            auto-collapses to a single status chip after all agents finish. */}
         <AgentPipeline agentRuns={agentRuns} pathStatus={path.status} />
-
-        {/* Bridge framing — from skillDiff */}
-        {skillDiffOutput?.headline?.framing && (
-          <Card className="mt-6 block w-full">
-            <div className="p-5">
-              <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
-                Why this bridge
-              </Text>
-              <Text as="p" className="text-base leading-relaxed">
-                {skillDiffOutput.headline.framing}
-              </Text>
-            </div>
-          </Card>
-        )}
 
         {/* Tabbed module content — matches sample module pattern */}
         {moduleDoc && (
           <ModuleTabs
             moduleDoc={moduleDoc}
+            featuredDoc={featuredDoc ?? null}
             skillDiff={skillDiffOutput}
             currentCareer={path.currentCareer}
             targetCareer={path.targetCareer}
@@ -262,6 +260,76 @@ function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
+  // Voice mode toggle. Defaults ON now that ElevenLabs cost isn't a concern.
+  // When ON: mic button is primary input + assistant audio replies auto-play.
+  // When OFF: type as today, no auto-play. Persisted in localStorage so a
+  // returning user who explicitly turned it off stays off.
+  const [voiceMode, setVoiceMode] = useState(true);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem("pathfinder.voiceMode");
+    // null (never set) or "1" → keep default ON. Only "0" (explicit off) flips.
+    if (stored === "0") setVoiceMode(false);
+  }, []);
+  function toggleVoiceMode() {
+    const next = !voiceMode;
+    setVoiceMode(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("pathfinder.voiceMode", next ? "1" : "0");
+    }
+  }
+
+  // Web Speech API — browser STT. Chrome/Edge/Safari supported, Firefox not.
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const sttSupported =
+    typeof window !== "undefined" &&
+    (("SpeechRecognition" in window) || ("webkitSpeechRecognition" in window));
+
+  function startListening() {
+    if (!sttSupported || listening) return;
+    const SR =
+      (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    const recognition = new SR();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: any) => {
+      let interim = "";
+      let final = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += transcript;
+        else interim += transcript;
+      }
+      // Live-update the input field as user speaks
+      setDraft((prev) => {
+        // If we have a final piece, append to existing draft (idempotent on
+        // the interim portion). Otherwise show interim live.
+        return final ? final : interim;
+      });
+    };
+
+    recognition.onerror = (e: any) => {
+      console.warn("[stt] error:", e?.error);
+      setListening(false);
+    };
+    recognition.onend = () => {
+      setListening(false);
+    };
+
+    recognition.start();
+    recognitionRef.current = recognition;
+    setListening(true);
+  }
+
+  function stopListening() {
+    if (!listening) return;
+    recognitionRef.current?.stop();
+    setListening(false);
+  }
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (open && scrollRef.current) {
@@ -275,6 +343,7 @@ function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
     if (!trimmed || sending) return;
     setSending(true);
     setDraft("");
+    stopListening();
     try {
       await askCounselor({ pathId, message: trimmed });
     } catch (err) {
@@ -298,13 +367,32 @@ function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
       {/* Chat panel */}
       {open && (
         <aside className="fixed bottom-24 right-5 z-30 w-[min(420px,calc(100vw-2rem))] max-h-[70vh] flex flex-col border-2 border-black bg-card rounded shadow-md">
-          <header className="border-b-2 border-black bg-primary/30 px-4 py-2.5">
-            <Text as="p" className="font-head text-sm">
-              AI Career Counselor
-            </Text>
-            <Text as="p" className="text-xs text-muted-foreground">
-              Sonnet 4.6 · sees your full path. Ask anything.
-            </Text>
+          <header className="border-b-2 border-black bg-primary/30 px-4 py-2.5 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Text as="p" className="font-head text-sm">
+                AI Career Counselor
+              </Text>
+              <Text as="p" className="text-xs text-muted-foreground">
+                Sonnet 4.6 · sees your full path. Ask anything.
+              </Text>
+            </div>
+            <button
+              type="button"
+              onClick={toggleVoiceMode}
+              aria-label={voiceMode ? "Turn voice mode off" : "Turn voice mode on"}
+              title={
+                voiceMode
+                  ? "Voice mode ON · replies auto-play, mic button on"
+                  : "Voice mode OFF · type to chat"
+              }
+              className={`flex-shrink-0 border-2 border-black rounded px-2.5 py-1 text-xs font-head transition-colors ${
+                voiceMode
+                  ? "bg-foreground text-background"
+                  : "bg-card hover:bg-accent"
+              }`}
+            >
+              {voiceMode ? "🔊 Voice ON" : "🔇 Voice OFF"}
+            </button>
           </header>
 
           <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
@@ -352,7 +440,13 @@ function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
               </div>
             )}
             {messages?.map((m) => (
-              <CounselorMessage key={m._id} role={m.role} content={m.content} />
+              <CounselorMessage
+                key={m._id}
+                role={m.role}
+                content={m.content}
+                audioUrl={m.audioUrl}
+                voiceMode={voiceMode}
+              />
             ))}
             {sending && (
               <div className="text-sm text-muted-foreground italic">
@@ -374,12 +468,34 @@ function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
                   onSend(e as unknown as FormEvent<HTMLFormElement>);
                 }
               }}
-              placeholder="Ask anything about your path…"
+              placeholder={
+                listening
+                  ? "Listening… speak now"
+                  : voiceMode && sttSupported
+                    ? "Tap mic to speak, or type"
+                    : "Ask anything about your path…"
+              }
               rows={1}
               disabled={sending}
               className="flex-1 resize-none border-2 border-black rounded px-2 py-1.5 text-sm bg-card focus:outline-none"
               style={{ minHeight: "36px", maxHeight: "120px" }}
             />
+            {voiceMode && sttSupported && (
+              <button
+                type="button"
+                onClick={listening ? stopListening : startListening}
+                disabled={sending}
+                aria-label={listening ? "Stop listening" : "Start voice input"}
+                title={listening ? "Stop" : "Speak"}
+                className={`border-2 border-black rounded px-2.5 py-1.5 font-head text-sm transition-colors ${
+                  listening
+                    ? "bg-destructive text-destructive-foreground animate-pulse"
+                    : "bg-card hover:bg-accent"
+                }`}
+              >
+                {listening ? "● REC" : "🎙"}
+              </button>
+            )}
             <button
               type="submit"
               disabled={sending || draft.trim().length === 0}
@@ -394,7 +510,38 @@ function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
   );
 }
 
-function CounselorMessage({ role, content }: { role: string; content: string }) {
+function CounselorMessage({
+  role,
+  content,
+  audioUrl,
+  voiceMode,
+}: {
+  role: string;
+  content: string;
+  audioUrl?: string;
+  voiceMode?: boolean;
+}) {
+  // Auto-play assistant audio once, only when voice mode is on. Track which
+  // audio URLs we've already played so a re-render (live query update) doesn't
+  // restart playback. Per-message audio element so the user can also replay.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!audioUrl || !voiceMode || role !== "assistant") return;
+    if (playedRef.current.has(audioUrl)) return;
+    playedRef.current.add(audioUrl);
+    const audio = audioRef.current;
+    if (audio) {
+      audio.play().catch((err) => {
+        // Browsers block autoplay until user has interacted with the page.
+        // The voice toggle click counts as interaction, but if they reload
+        // and a queued message has audio, we silently skip (UI still has
+        // the inline player as a fallback).
+        console.log("[counselor] audio autoplay blocked:", err?.message);
+      });
+    }
+  }, [audioUrl, voiceMode, role]);
+
   if (role === "user") {
     return (
       <div className="ml-6 border-2 border-black bg-primary/20 rounded px-3 py-2 text-sm whitespace-pre-wrap break-words">
@@ -402,9 +549,78 @@ function CounselorMessage({ role, content }: { role: string; content: string }) 
       </div>
     );
   }
+  // Assistant messages render markdown so **bold**, *italic*, lists, and rules
+  // come through as formatted text. Element overrides keep the brutalism
+  // aesthetic: bold maps to font-head, hr is a 2px black rule, etc.
   return (
-    <div className="mr-6 border-2 border-black bg-card rounded px-3 py-2 text-sm whitespace-pre-wrap break-words leading-relaxed">
-      {content}
+    <div className="mr-6 border-2 border-black bg-card rounded px-3 py-2 text-sm break-words leading-relaxed">
+      <div className="counselor-md">
+        <ReactMarkdown
+          components={{
+            p: ({ children }) => (
+              <p className="my-1.5 first:mt-0 last:mb-0 leading-relaxed">{children}</p>
+            ),
+            strong: ({ children }) => (
+              <strong className="font-head">{children}</strong>
+            ),
+            em: ({ children }) => <em className="italic">{children}</em>,
+            hr: () => <hr className="my-3 border-0 border-t-2 border-black" />,
+            ul: ({ children }) => (
+              <ul className="my-2 ml-4 list-disc list-outside space-y-1 marker:text-foreground/40">
+                {children}
+              </ul>
+            ),
+            ol: ({ children }) => (
+              <ol className="my-2 ml-4 list-decimal list-outside space-y-1 marker:text-foreground/60">
+                {children}
+              </ol>
+            ),
+            li: ({ children }) => <li className="leading-relaxed">{children}</li>,
+            h1: ({ children }) => <h2 className="font-head text-base mt-2 mb-1">{children}</h2>,
+            h2: ({ children }) => <h3 className="font-head text-sm mt-2 mb-1">{children}</h3>,
+            h3: ({ children }) => (
+              <h4 className="font-head text-sm mt-2 mb-1">{children}</h4>
+            ),
+            code: ({ children }) => (
+              <code className="px-1 py-0.5 bg-muted/60 border border-black/30 rounded text-[0.85em] font-mono">
+                {children}
+              </code>
+            ),
+            a: ({ children, href }) => (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 decoration-2 hover:text-foreground/80"
+              >
+                {children}
+              </a>
+            ),
+            blockquote: ({ children }) => (
+              <blockquote className="my-2 pl-3 border-l-2 border-black/40 text-foreground/80 italic">
+                {children}
+              </blockquote>
+            ),
+          }}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+      {audioUrl && (
+        <div className="mt-2 pt-2 border-t border-black/20 flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-widest font-head text-muted-foreground">
+            🔊 Voice
+          </span>
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+          <audio
+            ref={audioRef}
+            src={audioUrl}
+            controls
+            preload="auto"
+            className="flex-1 h-7"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -425,6 +641,7 @@ function SalaryPanel({
   sonarSalary,
   opusCurrent,
   opusTarget,
+  pathStatus,
 }: {
   currentTitle: string;
   targetTitle: string;
@@ -433,6 +650,7 @@ function SalaryPanel({
   sonarSalary?: any;
   opusCurrent?: any;
   opusTarget?: any;
+  pathStatus?: string;
 }) {
   // Prefer Sonar (current, cited, city-specific) over Opus baseline
   const sonarHasData = sonarSalary?.current?.medianAnnual && sonarSalary?.target?.medianAnnual;
@@ -473,6 +691,53 @@ function SalaryPanel({
       : null;
   const isNegative = lift !== null && lift < 0;
 
+  // Auto-collapse 8s after path is done. The full 3-column panel is great
+  // first-read content but takes 250px; second-visit users get a compact
+  // strip with the same key numbers and an expand affordance.
+  const [collapsed, setCollapsed] = useState(false);
+  const [userOverride, setUserOverride] = useState(false);
+  const isComplete = pathStatus === "done";
+  useEffect(() => {
+    if (!isComplete || userOverride) return;
+    const timer = window.setTimeout(() => setCollapsed(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [isComplete, userOverride]);
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setCollapsed(false);
+          setUserOverride(true);
+        }}
+        className="mt-5 w-full flex items-center justify-between gap-3 border-2 border-black rounded bg-card hover:bg-accent px-4 py-2 text-left transition-colors"
+        aria-label="Expand salary and outlook panel"
+      >
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <span className="text-xs font-head uppercase tracking-widest">
+            Salary + outlook
+          </span>
+          <span className="text-sm font-head">
+            {formatSalary(anchorSalary)} → {formatSalary(target?.medianSalary)}
+          </span>
+          {liftPct !== null && (
+            <span
+              className={`text-sm font-head ${isNegative ? "text-destructive" : ""}`}
+            >
+              ({isNegative ? "" : "+"}
+              {liftPct}%)
+            </span>
+          )}
+          {usingSonar && city && (
+            <span className="text-xs text-muted-foreground">· {city}</span>
+          )}
+        </div>
+        <span className="text-foreground/60 text-sm">expand ▾</span>
+      </button>
+    );
+  }
+
   return (
     <div className="mt-5 border-2 border-black rounded p-4 bg-card">
       <div className="flex items-baseline justify-between flex-wrap gap-2 mb-3">
@@ -484,11 +749,26 @@ function SalaryPanel({
             </span>
           )}
         </Text>
-        <Text as="p" className="text-xs text-muted-foreground">
-          {usingSonar
-            ? "Live web data · Perplexity Sonar with citations"
-            : "National median (US) · Opus baseline"}
-        </Text>
+        <div className="flex items-center gap-3">
+          <Text as="p" className="text-xs text-muted-foreground">
+            {usingSonar
+              ? "Live web data · Perplexity Sonar with citations"
+              : "National median (US) · Opus baseline"}
+          </Text>
+          {isComplete && (
+            <button
+              type="button"
+              onClick={() => {
+                setCollapsed(true);
+                setUserOverride(true);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+              aria-label="Collapse salary panel"
+            >
+              collapse
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* From */}
@@ -661,12 +941,14 @@ function PathOutlineView({
   generatedNumbers,
   activeNumber,
   onModuleClick,
+  pathStatus,
 }: {
   outline: any;
   hoursPerWeek?: number;
   generatedNumbers: Set<number>;
   activeNumber: number;
   onModuleClick: (n: number, isGenerated: boolean) => void;
+  pathStatus?: string;
 }) {
   // Re-pace the path based on the user's stated weekly availability. Default
   // path is sized at outline.totalWeeks; if the learner has fewer hours/week,
@@ -681,15 +963,99 @@ function PathOutlineView({
   const repacedMonths =
     repacedWeeks !== null ? Math.round((repacedWeeks / 4.33) * 10) / 10 : null;
 
+  // Auto-collapse to a thin module-stepper strip 8s after path is done.
+  // The full 4-phase grid is great for first-time orientation but it's 400px
+  // tall, and a returning user reading lesson 4 doesn't need to see all 12
+  // modules every time. Compact view shows current phase + active module +
+  // an expand chip; the actual lesson moves up by ~400px.
+  const [collapsed, setCollapsed] = useState(false);
+  const [userOverride, setUserOverride] = useState(false);
+  const isComplete = pathStatus === "done";
+  useEffect(() => {
+    if (!isComplete || userOverride) return;
+    const timer = window.setTimeout(() => setCollapsed(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [isComplete, userOverride]);
+
+  // Find the active phase + module for the collapsed summary
+  const flatModules: any[] = (outline.phases ?? []).flatMap((p: any) =>
+    (p.modules ?? []).map((m: any) => ({ ...m, _phaseTitle: p.title })),
+  );
+  const activeModule = flatModules.find((m) => m.number === activeNumber);
+  const activePhaseTitle = activeModule?._phaseTitle ?? "";
+
+  if (collapsed) {
+    return (
+      <div className="mt-8 space-y-3">
+        {/* Compact module stepper — horizontal pills for every module */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground whitespace-nowrap font-head">
+            {activePhaseTitle ? `${activePhaseTitle} ·` : ""} M{activeNumber}/{totalModules}
+          </Text>
+          <div className="flex items-center gap-1.5">
+            {flatModules.map((m) => {
+              const isGenerated = generatedNumbers.has(m.number);
+              const isActive = m.number === activeNumber;
+              return (
+                <button
+                  key={m.number}
+                  type="button"
+                  onClick={() => onModuleClick(m.number, isGenerated)}
+                  title={`M${m.number}: ${m.title}${isGenerated ? "" : " (not yet generated)"}`}
+                  aria-label={`Module ${m.number}: ${m.title}`}
+                  className={`flex items-center justify-center min-w-[32px] h-8 px-2 border-2 border-black rounded text-xs font-head whitespace-nowrap transition-colors ${
+                    isActive
+                      ? "bg-foreground text-background"
+                      : isGenerated
+                        ? "bg-card hover:bg-accent"
+                        : "bg-muted/40 hover:bg-accent text-foreground/60"
+                  }`}
+                >
+                  {m.number}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setCollapsed(false);
+              setUserOverride(true);
+            }}
+            className="ml-auto text-xs text-muted-foreground hover:text-foreground underline whitespace-nowrap"
+            aria-label="Expand full learning path"
+          >
+            full path ▾
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-8">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
           Your full learning path · click any module to open or generate
         </Text>
-        <Text as="p" className="text-xs text-muted-foreground">
-          {totalHours}h · {totalModules} modules · {generatedNumbers.size} generated
-        </Text>
+        <div className="flex items-center gap-3">
+          <Text as="p" className="text-xs text-muted-foreground">
+            {totalHours}h · {totalModules} modules · {generatedNumbers.size} generated
+          </Text>
+          {isComplete && (
+            <button
+              type="button"
+              onClick={() => {
+                setCollapsed(true);
+                setUserOverride(true);
+              }}
+              className="text-xs text-muted-foreground hover:text-foreground underline"
+              aria-label="Collapse path outline"
+            >
+              collapse
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Re-paced timeline strip: honest math based on the user's stated availability */}
@@ -794,14 +1160,74 @@ function PathOutlineView({
 
 function AgentPipeline({ agentRuns, pathStatus }: { agentRuns: any[]; pathStatus: string }) {
   const done = agentRuns.filter((r) => r.status === "done").length;
+  const errored = agentRuns.filter((r) => r.status === "error").length;
   const total = agentRuns.length || 6;
   const pct = Math.round((done / total) * 100);
 
+  // Auto-collapse 8s after the path is done. User-facing reasoning: the
+  // pipeline tiles are demo wow during generation; after that they're noise.
+  // Manual override stays open if user expanded after auto-collapse.
+  const [collapsed, setCollapsed] = useState(false);
+  const [userOverride, setUserOverride] = useState(false);
+  const isComplete = pathStatus === "done" || pathStatus === "error" || pathStatus === "timeout";
+  useEffect(() => {
+    if (!isComplete || userOverride) return;
+    const timer = window.setTimeout(() => setCollapsed(true), 8000);
+    return () => window.clearTimeout(timer);
+  }, [isComplete, userOverride]);
+
+  // Sum elapsed time across all completed runs for the collapsed summary
+  const totalElapsedSec = agentRuns.reduce((acc, r) => {
+    if (r.startedAt && r.finishedAt) return acc + (r.finishedAt - r.startedAt) / 1000;
+    return acc;
+  }, 0);
+
+  if (collapsed) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setCollapsed(false);
+          setUserOverride(true);
+        }}
+        className="mt-6 w-full flex items-center justify-between gap-3 border-2 border-black rounded bg-card hover:bg-accent px-4 py-2 text-left transition-colors"
+        aria-label="Expand agent pipeline"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-head uppercase tracking-widest">
+            Agent pipeline
+          </span>
+          <span className="text-sm">
+            {done}/{total} agents
+            {errored > 0 ? ` · ${errored} error${errored > 1 ? "s" : ""}` : ""}
+            {totalElapsedSec > 0 ? ` · ${Math.round(totalElapsedSec)}s total` : ""}
+          </span>
+        </div>
+        <span className="text-foreground/60 text-sm">expand ▾</span>
+      </button>
+    );
+  }
+
   return (
     <div className="mt-6">
-      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+      <div className="flex justify-between items-center text-xs text-muted-foreground mb-1">
         <span>Agent pipeline · {pathStatus}</span>
-        <span>{done}/{total} complete</span>
+        <div className="flex items-center gap-3">
+          <span>{done}/{total} complete</span>
+          {isComplete && (
+            <button
+              type="button"
+              onClick={() => {
+                setCollapsed(true);
+                setUserOverride(true);
+              }}
+              className="underline hover:text-foreground"
+              aria-label="Collapse agent pipeline"
+            >
+              collapse
+            </button>
+          )}
+        </div>
       </div>
       <div className="h-3 bg-muted rounded-full overflow-hidden border-2 border-black">
         <div
@@ -845,11 +1271,13 @@ function AgentPipeline({ agentRuns, pathStatus }: { agentRuns: any[]; pathStatus
 
 function ModuleTabs({
   moduleDoc,
+  featuredDoc,
   skillDiff,
   currentCareer,
   targetCareer,
 }: {
   moduleDoc: any;
+  featuredDoc: any | null;
   skillDiff: any;
   currentCareer: string;
   targetCareer: string;
@@ -875,7 +1303,7 @@ function ModuleTabs({
           <TabsTrigger>Videos</TabsTrigger>
           <TabsTrigger>Courses</TabsTrigger>
           <TabsTrigger>Books</TabsTrigger>
-          <TabsTrigger>News</TabsTrigger>
+          <TabsTrigger>About this career</TabsTrigger>
           <TabsTrigger>
             Quiz
             {quizSubmitted && (
@@ -907,9 +1335,13 @@ function ModuleTabs({
             <BooksTab books={moduleDoc.books} />
           </TabsContent>
 
-          {/* NEWS */}
+          {/* ABOUT THIS CAREER — description (primary) + news (absorbed) + scholar slot */}
           <TabsContent>
-            <NewsTab news={moduleDoc.news} />
+            <AboutTab
+              description={featuredDoc?.description ?? moduleDoc.description}
+              news={featuredDoc?.news ?? moduleDoc.news}
+              targetCareer={targetCareer}
+            />
           </TabsContent>
 
           {/* QUIZ */}
@@ -1005,21 +1437,26 @@ function LessonTab({ lesson }: { lesson: any }) {
 }
 
 function VideosTab({ videos }: { videos: any[] }) {
+  const INITIAL = 6;
+  const [showAll, setShowAll] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<any | null>(null);
+
   if (videos.length === 0) {
     return <Text as="p" className="text-muted-foreground">Videos are still loading...</Text>;
   }
+  const visible = showAll ? videos : videos.slice(0, INITIAL);
+  const hidden = videos.length - visible.length;
   return (
     <div className="space-y-3">
       <Text as="p" className="text-sm text-muted-foreground mb-2">
         Curated from YouTube — ranked by Claude for relevance to this career transition.
       </Text>
-      {videos.map((v) => (
-        <a
+      {visible.map((v) => (
+        <button
           key={v.videoId}
-          href={v.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex gap-4 p-3 border-2 border-black rounded bg-card hover:bg-accent transition-colors"
+          type="button"
+          onClick={() => setActiveVideo(v)}
+          className="flex gap-4 p-3 border-2 border-black rounded bg-card hover:bg-accent transition-colors text-left w-full"
         >
           {v.thumbnailUrl && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -1043,8 +1480,93 @@ function VideosTab({ videos }: { videos: any[] }) {
               </Text>
             </div>
           </div>
-        </a>
+        </button>
       ))}
+
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="w-full border-2 border-black bg-card hover:bg-accent rounded px-4 py-2 text-sm font-head shadow-[2px_2px_0_0_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+        >
+          + Show {hidden} more
+        </button>
+      )}
+      {showAll && videos.length > INITIAL && (
+        <button
+          type="button"
+          onClick={() => setShowAll(false)}
+          className="w-full text-xs text-muted-foreground hover:text-foreground underline pt-1"
+        >
+          Show fewer
+        </button>
+      )}
+
+      {activeVideo && (
+        <VideoModal video={activeVideo} onClose={() => setActiveVideo(null)} />
+      )}
+    </div>
+  );
+}
+
+function VideoModal({ video, onClose }: { video: any; onClose: () => void }) {
+  // Esc to close
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="w-full max-w-4xl">
+        <div className="border-2 border-black bg-card rounded overflow-hidden shadow-[6px_6px_0_0_#000]">
+          <div className="flex items-start justify-between gap-3 p-3 border-b-2 border-black">
+            <div className="flex-1 min-w-0">
+              <Text as="p" className="font-head text-base leading-tight line-clamp-2">
+                {video.title}
+              </Text>
+              <Text as="p" className="text-xs text-muted-foreground mt-1">
+                {video.channelTitle} · {video.duration} · {video.relevanceScore}% relevant
+              </Text>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <a
+                href={video.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs underline text-foreground/70 hover:text-foreground"
+              >
+                Open on YouTube ↗
+              </a>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="border-2 border-black bg-card hover:bg-accent rounded px-2 py-1 text-sm font-head"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+          <div className="aspect-video bg-black">
+            <iframe
+              src={`https://www.youtube.com/embed/${video.videoId}?autoplay=1&rel=0`}
+              title={video.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1278,16 +1800,23 @@ function ProjectTab({
 }
 
 function BooksTab({ books }: { books: any }) {
+  const INITIAL = 5;
+  const [showAll, setShowAll] = useState(false);
+
   if (!books || !books.books || books.books.length === 0) {
     return <Text as="p" className="text-muted-foreground">Books still loading...</Text>;
   }
+  const list: any[] = books.books;
+  const visible = showAll ? list : list.slice(0, INITIAL);
+  const hidden = list.length - visible.length;
+
   return (
     <div className="space-y-3">
       <Text as="p" className="text-sm text-muted-foreground mb-2">
-        Canonical and foundational texts for this field, from Google Books. Every
-        link goes to a free preview.
+        Canonical and foundational texts for this field, from Google Books. Each
+        is filtered by Claude for relevance, then linked to a free preview.
       </Text>
-      {books.books.map((b: any) => (
+      {visible.map((b: any) => (
         <a
           key={b.id}
           href={b.infoLink}
@@ -1329,10 +1858,40 @@ function BooksTab({ books }: { books: any }) {
                   {typeof b.ratingsCount === "number" ? ` (${b.ratingsCount})` : ""}
                 </Badge>
               )}
+              {typeof b.relevanceScore === "number" && (
+                <span className="ml-auto inline-flex items-center gap-1.5">
+                  <span className="h-1.5 w-16 bg-muted border border-black rounded-full overflow-hidden">
+                    <span
+                      className="block h-full bg-primary"
+                      style={{ width: `${b.relevanceScore}%` }}
+                    />
+                  </span>
+                  <span>{b.relevanceScore}% relevant</span>
+                </span>
+              )}
             </div>
           </div>
         </a>
       ))}
+
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="w-full border-2 border-black bg-card hover:bg-accent rounded px-4 py-2 text-sm font-head shadow-[2px_2px_0_0_#000] hover:shadow-none hover:translate-x-[1px] hover:translate-y-[1px] transition-all"
+        >
+          + Show {hidden} more
+        </button>
+      )}
+      {showAll && list.length > INITIAL && (
+        <button
+          type="button"
+          onClick={() => setShowAll(false)}
+          className="w-full text-xs text-muted-foreground hover:text-foreground underline pt-1"
+        >
+          Show fewer
+        </button>
+      )}
     </div>
   );
 }
@@ -1344,6 +1903,344 @@ const NEWS_TAG_STYLES: Record<string, string> = {
   Policy: "bg-muted border-black",
   Culture: "bg-primary/20 border-black",
 };
+
+/**
+ * AboutTab — the merged "About this career" surface.
+ *
+ * Layout:
+ *   1. Title + one-line definition (large)
+ *   2. Day in the life (3-bucket card)
+ *   3. Tools & artifacts (badge grid)
+ *   4. Career ladder (table)
+ *   5. Trade-offs (2-col pros/cons)
+ *   6. Entry pathways (stacked)
+ *   7. Adjacent careers + Who you work with (2-col)
+ *   8. Recent news (absorbed from former News tab)
+ *   9. Scholarly research slot — placeholder, wired in v2 via Semantic Scholar
+ */
+function AboutTab({
+  description,
+  news,
+  targetCareer,
+}: {
+  description: any;
+  news: any;
+  targetCareer: string;
+}) {
+  if (!description) {
+    return (
+      <Text as="p" className="text-muted-foreground">
+        Description still generating... usually 8-12 seconds.
+      </Text>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header — one-line definition */}
+      <div>
+        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-2">
+          About being a {targetCareer}
+        </Text>
+        {description.oneLineDefinition && (
+          <Text as="h2" className="text-2xl md:text-3xl leading-tight">
+            {description.oneLineDefinition}
+          </Text>
+        )}
+      </div>
+
+      {/* Day in the life */}
+      {description.dayInTheLife && (
+        <section>
+          <Text as="h3" className="text-xl mb-3">
+            Day in the life
+          </Text>
+          <div className="border-2 border-black rounded bg-card p-4 space-y-4">
+            {description.dayInTheLife.morning && (
+              <div>
+                <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">
+                  Morning
+                </Text>
+                <Text as="p" className="text-sm leading-relaxed">
+                  {description.dayInTheLife.morning}
+                </Text>
+              </div>
+            )}
+            {description.dayInTheLife.afternoon && (
+              <div>
+                <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">
+                  Afternoon
+                </Text>
+                <Text as="p" className="text-sm leading-relaxed">
+                  {description.dayInTheLife.afternoon}
+                </Text>
+              </div>
+            )}
+            {description.dayInTheLife.eveningOrEdge && (
+              <div>
+                <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">
+                  Weekly arc / edge cases
+                </Text>
+                <Text as="p" className="text-sm leading-relaxed">
+                  {description.dayInTheLife.eveningOrEdge}
+                </Text>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Tools & artifacts */}
+      {description.toolsAndArtifacts?.length > 0 && (
+        <section>
+          <Text as="h3" className="text-xl mb-3">
+            Tools & artifacts
+          </Text>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {description.toolsAndArtifacts.map((t: any, i: number) => (
+              <div
+                key={i}
+                className="border-2 border-black rounded bg-card p-3 flex items-baseline gap-2"
+              >
+                <Badge size="sm" variant="surface" className="flex-shrink-0">
+                  {t.name}
+                </Badge>
+                <Text as="p" className="text-sm text-foreground/80 leading-snug">
+                  {t.purpose}
+                </Text>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Career ladder */}
+      {description.ladder?.length > 0 && (
+        <section>
+          <Text as="h3" className="text-xl mb-3">
+            Career ladder & comp
+          </Text>
+          <div className="border-2 border-black rounded bg-card overflow-hidden">
+            <div className="divide-y-2 divide-black">
+              {description.ladder.map((rung: any, i: number) => (
+                <div key={i} className="p-3 grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-3">
+                  <div className="md:col-span-3">
+                    <Text as="p" className="font-head text-sm">
+                      {rung.title}
+                    </Text>
+                    {rung.yearsExperience && (
+                      <Text as="p" className="text-xs text-muted-foreground">
+                        {rung.yearsExperience}
+                      </Text>
+                    )}
+                  </div>
+                  <div className="md:col-span-3">
+                    {rung.compRange && (
+                      <Badge size="sm" variant="outline">
+                        {rung.compRange}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="md:col-span-6">
+                    <Text as="p" className="text-sm text-foreground/80 leading-snug">
+                      {rung.whatChanges}
+                    </Text>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Trade-offs */}
+      {(description.tradeoffs?.pros?.length > 0 ||
+        description.tradeoffs?.cons?.length > 0) && (
+        <section>
+          <Text as="h3" className="text-xl mb-3">
+            Honest trade-offs
+          </Text>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {description.tradeoffs.pros?.length > 0 && (
+              <div className="border-2 border-black rounded bg-emerald-100 p-4">
+                <Text as="p" className="text-xs font-head uppercase tracking-widest mb-2">
+                  Pros
+                </Text>
+                <ul className="space-y-2 list-disc list-inside marker:text-foreground/40">
+                  {description.tradeoffs.pros.map((s: string, i: number) => (
+                    <li key={i} className="text-sm leading-snug">
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {description.tradeoffs.cons?.length > 0 && (
+              <div className="border-2 border-black rounded bg-rose-100 p-4">
+                <Text as="p" className="text-xs font-head uppercase tracking-widest mb-2">
+                  Cons
+                </Text>
+                <ul className="space-y-2 list-disc list-inside marker:text-foreground/40">
+                  {description.tradeoffs.cons.map((s: string, i: number) => (
+                    <li key={i} className="text-sm leading-snug">
+                      {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Entry pathways */}
+      {description.entryPathways?.length > 0 && (
+        <section>
+          <Text as="h3" className="text-xl mb-3">
+            How people actually break in
+          </Text>
+          <div className="space-y-2">
+            {description.entryPathways.map((p: any, i: number) => (
+              <div key={i} className="border-2 border-black rounded bg-card p-3">
+                <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                  <Text as="p" className="font-head text-sm">
+                    {p.pathway}
+                  </Text>
+                  {p.proportion && (
+                    <Badge size="sm" variant="default">
+                      {p.proportion}
+                    </Badge>
+                  )}
+                </div>
+                {p.notes && (
+                  <Text as="p" className="text-sm text-foreground/80 mt-1 leading-snug">
+                    {p.notes}
+                  </Text>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Adjacent careers + Who you work with */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {description.adjacentCareers?.length > 0 && (
+          <section>
+            <Text as="h3" className="text-xl mb-3">
+              Where this can lead
+            </Text>
+            <div className="space-y-2">
+              {description.adjacentCareers.map((c: any, i: number) => (
+                <div key={i} className="border-2 border-black rounded bg-card p-3">
+                  <Text as="p" className="font-head text-sm">
+                    {c.title}
+                  </Text>
+                  {c.movePattern && (
+                    <Text as="p" className="text-xs text-muted-foreground mt-1 leading-snug">
+                      {c.movePattern}
+                    </Text>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+        {description.whoYouWorkWith?.length > 0 && (
+          <section>
+            <Text as="h3" className="text-xl mb-3">
+              Who you work with
+            </Text>
+            <div className="space-y-2">
+              {description.whoYouWorkWith.map((w: any, i: number) => (
+                <div key={i} className="border-2 border-black rounded bg-card p-3">
+                  <Text as="p" className="font-head text-sm">
+                    {w.role}
+                  </Text>
+                  {w.relationship && (
+                    <Text as="p" className="text-xs text-muted-foreground mt-1 leading-snug">
+                      {w.relationship}
+                    </Text>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {/* News (absorbed from former News tab) */}
+      {news?.items?.length > 0 && (
+        <section>
+          <div className="flex items-baseline justify-between gap-3 mb-3">
+            <Text as="h3" className="text-xl">
+              Recent news in this field
+            </Text>
+            <Text as="p" className="text-xs text-muted-foreground">
+              From Perplexity Sonar · last 30 days
+            </Text>
+          </div>
+          <div className="space-y-3">
+            {news.items.map((item: any, i: number) => (
+              <a
+                key={i}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border-2 border-black rounded p-4 bg-card hover:bg-accent transition-colors"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <Text as="p" className="font-head text-base leading-snug">
+                      {item.title}
+                    </Text>
+                    <Text as="p" className="text-xs text-muted-foreground mt-1">
+                      {item.source}
+                      {item.date ? ` · ${item.date}` : ""}
+                    </Text>
+                  </div>
+                  {item.tag && (
+                    <span
+                      className={`text-xs font-head uppercase tracking-widest px-2 py-1 rounded border-2 whitespace-nowrap ${NEWS_TAG_STYLES[item.tag] ?? NEWS_TAG_STYLES["Industry Growth"]}`}
+                    >
+                      {item.tag}
+                    </span>
+                  )}
+                </div>
+                {item.summary && (
+                  <Text as="p" className="mt-3 text-sm leading-relaxed">
+                    {item.summary}
+                  </Text>
+                )}
+                {item.whyItMatters && (
+                  <div className="mt-3 border-2 border-black rounded bg-primary/20 p-3">
+                    <Text as="p" className="text-xs font-head uppercase tracking-widest mb-1">
+                      Why this matters for you
+                    </Text>
+                    <Text as="p" className="text-sm">
+                      {item.whyItMatters}
+                    </Text>
+                  </div>
+                )}
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Scholarly research — slot reserved for Semantic Scholar in v2 */}
+      <section className="border-2 border-dashed border-black/40 rounded p-4 bg-card/40">
+        <Text as="p" className="text-xs font-head uppercase tracking-widest text-muted-foreground mb-1">
+          Scholarly research
+        </Text>
+        <Text as="p" className="text-sm text-foreground/70">
+          Coming soon: peer-reviewed papers and citations from Semantic Scholar,
+          filtered for relevance to {targetCareer}.
+        </Text>
+      </section>
+    </div>
+  );
+}
 
 function NewsTab({ news }: { news: any }) {
   if (!news || !news.items || news.items.length === 0) {

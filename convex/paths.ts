@@ -25,6 +25,7 @@ export const createPath = mutation({
     hoursPerWeek: v.optional(v.number()),
     city: v.optional(v.string()),
     profileText: v.optional(v.string()),
+    interests: v.optional(v.string()),
     currentSalary: v.optional(v.number()),
   },
   handler: async (ctx, args): Promise<Id<"paths">> => {
@@ -84,6 +85,13 @@ export const createPath = mutation({
         ? profileTrim.slice(0, 8000)
         : undefined;
 
+    // Interests is a shorter free-text signal ("what I enjoy"). Capped at 2000.
+    const interestsTrim = args.interests?.trim();
+    const interests =
+      interestsTrim && interestsTrim.length > 0
+        ? interestsTrim.slice(0, 2000)
+        : undefined;
+
     // Sanity-clamp salary to $0-$10M annual (catches both raw dollars and
     // accidental K/M suffixes via parseInt).
     const currentSalary =
@@ -103,6 +111,7 @@ export const createPath = mutation({
       hoursPerWeek,
       city,
       profileText,
+      interests,
       currentSalary,
       createdAt: now,
     });

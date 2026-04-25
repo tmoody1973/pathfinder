@@ -189,13 +189,14 @@ Return only JSON.`;
     const finalList = relevant.length > 0 ? relevant : scored.sort((a, b) => b.score - a.score).slice(0, 3);
 
     finalList.sort((a, b) => b.score - a.score);
-    return finalList.slice(0, 5).map((s) => ({
+    // Return up to 12 so the UI can render 6 + "Show more" without a refetch
+    return finalList.slice(0, 12).map((s) => ({
       ...s.video,
       relevanceScore: s.score, // overwrite with the LLM-judged score
     }));
   } catch (err) {
-    console.error("[runResourceAgent] relevance filter failed, falling back to top 5:", err);
-    return candidates.slice(0, 5);
+    console.error("[runResourceAgent] relevance filter failed, falling back to top 12:", err);
+    return candidates.slice(0, 12);
   }
 }
 
@@ -207,8 +208,10 @@ export async function runResourceAgent(
   const queries = await generateQueries(anthropic, skillDiff);
 
   // Step 2: parallel YouTube searches with dedup
+  // count: 8 per query × 3 queries = 24 candidates before dedup, plenty for the
+  // relevance filter to surface 12 truly-relevant ones.
   const searchResults = await Promise.allSettled(
-    queries.map((q) => searchAndRankVideos(q, { count: 6 })),
+    queries.map((q) => searchAndRankVideos(q, { count: 8 })),
   );
 
   const seen = new Set<string>();

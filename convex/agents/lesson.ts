@@ -24,6 +24,12 @@ export interface LessonResult {
   sections: LessonSection[];
 }
 
+export interface LessonExtras {
+  profileText?: string;
+  interests?: string;
+  hoursPerWeek?: number;
+}
+
 const SYSTEM_PROMPT = `You write narrative instructional lessons for career bridge modules on PathFinder.
 
 Voice: a working professional explaining to a skilled-but-different apprentice. The reader is mid-career — they already know how to learn, work hard, and own outcomes. They just need this specific competency translated from where they ARE to where they need to be.
@@ -53,11 +59,30 @@ Return ONLY valid JSON with this exact shape:
 export async function runLessonAgent(
   anthropic: Anthropic,
   skillDiff: SkillDiffResult,
+  extras: LessonExtras = {},
 ): Promise<LessonResult> {
   const sharedContext = [...skillDiff.diff.sharedKnowledge, ...skillDiff.diff.sharedSkills]
     .slice(0, 5)
     .map((c) => `${c.name} (${c.importance})`)
     .join(", ");
+
+  // Personalization block — only included if the user provided signals.
+  // Keeps the prompt clean for anonymous "I just typed two careers" runs.
+  const personalizationLines: string[] = [];
+  if (extras.interests && extras.interests.trim().length > 0) {
+    personalizationLines.push(
+      `LEARNER'S OWN WORDS — what they enjoy / want from work:\n"""\n${extras.interests.slice(0, 1500)}\n"""`,
+    );
+  }
+  if (extras.profileText && extras.profileText.trim().length > 0) {
+    personalizationLines.push(
+      `LEARNER'S BACKGROUND (LinkedIn / résumé excerpt):\n"""\n${extras.profileText.slice(0, 3000)}\n"""`,
+    );
+  }
+  const personalizationBlock =
+    personalizationLines.length > 0
+      ? `\n${personalizationLines.join("\n\n")}\n\nPERSONALIZATION RULES (only when these are present):\n- In the intro and at least one section's "tryThis", reference a specific phrase or interest from the learner's own words. Use their exact phrasing where natural.\n- Do NOT name-drop their previous employers or quote large blocks. Personalization is light-touch, not a profile recap.\n- If their interests genuinely don't connect to a section, skip the reference for that section. Forced connections read worse than no connection.\n`
+      : "";
 
   const prompt = `Build a bridge lesson for a learner pivoting from ${skillDiff.current.title} to ${skillDiff.target.title}.
 
@@ -67,7 +92,7 @@ Bloom level: ${skillDiff.headline.bloomLevel}
 
 What they already bring: ${sharedContext || "(general workplace competencies)"}.
 Bridge framing from skill-diff agent: "${skillDiff.headline.framing}"
-
+${personalizationBlock}
 Write the lesson now. Return only JSON.`;
 
   const response = await anthropic.messages.create({
