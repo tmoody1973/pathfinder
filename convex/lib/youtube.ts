@@ -40,37 +40,46 @@ export interface RankedYouTubeVideo {
   url: string; // https://youtube.com/watch?v=...
 }
 
-const YT_KEYS = [
-  process.env.YOUTUBE_API_KEY_1,
-  process.env.YOUTUBE_API_KEY_2,
-  process.env.YOUTUBE_API_KEY_3,
-].filter((k): k is string => typeof k === "string" && k.length > 0);
-
-if (YT_KEYS.length === 0) {
-  throw new Error(
-    "No YouTube API keys configured. Set YOUTUBE_API_KEY_1/2/3 in .env.local."
-  );
+/**
+ * Resolve keys lazily on first use. Convex statically loads this file at deploy
+ * time before env vars are necessarily set, so we cannot throw at module init.
+ * Validation happens the first time a function actually needs to make a call.
+ */
+function getYouTubeKeys(): string[] {
+  const keys = [
+    process.env.YOUTUBE_API_KEY_1,
+    process.env.YOUTUBE_API_KEY_2,
+    process.env.YOUTUBE_API_KEY_3,
+  ].filter((k): k is string => typeof k === "string" && k.length > 0);
+  if (keys.length === 0) {
+    throw new Error(
+      "No YouTube API keys configured. Convex actions don't read .env.local — " +
+        "set keys via `bunx convex env set YOUTUBE_API_KEY_1 <key>` (and _2, _3) " +
+        "or via the Convex dashboard.",
+    );
+  }
+  return keys;
 }
 
 let ytCallIndex = 0;
-const nextKeyIndex = (): number => ytCallIndex++ % YT_KEYS.length;
 
 /**
  * Call a YouTube API endpoint with automatic key rotation on quota exhaustion.
- * Tries up to YT_KEYS.length times before giving up.
+ * Tries each key in the rotation before giving up.
  */
 async function ytFetch(path: string, params: Record<string, string>): Promise<any> {
+  const keys = getYouTubeKeys(); // throws if no keys are configured
   const triedKeys = new Set<number>();
   let lastError: Error | null = null;
 
-  while (triedKeys.size < YT_KEYS.length) {
-    const idx = nextKeyIndex();
+  while (triedKeys.size < keys.length) {
+    const idx = ytCallIndex++ % keys.length;
     if (triedKeys.has(idx)) continue;
     triedKeys.add(idx);
 
     const url = new URL(`https://www.googleapis.com/youtube/v3/${path}`);
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-    url.searchParams.set("key", YT_KEYS[idx]);
+    url.searchParams.set("key", keys[idx]);
 
     const res = await fetch(url.toString());
     if (res.ok) return res.json();
@@ -89,7 +98,7 @@ async function ytFetch(path: string, params: Record<string, string>): Promise<an
   }
 
   throw new Error(
-    `All ${YT_KEYS.length} YouTube API keys exhausted. Last error: ${lastError?.message}`
+    `All ${keys.length} YouTube API keys exhausted. Last error: ${lastError?.message}`
   );
 }
 
