@@ -54,17 +54,21 @@ PROJECT BRIEF — exactly 1:
 - 2-6 estimated hours
 - Always a portfolio-quality output the learner can show TARGET-CAREER employers
 
-Return ONLY valid JSON with this exact shape:
+LENGTH BUDGET (strict): Keep total output under 1200 tokens. Trim explanation strings to 1-2 short sentences. Trim project brief to 2 sentences. Limit deliverables and skillsDemonstrated to 3 items each. NO markdown wrapping. NO leading prose. Output starts with { and ends with }.
+
+Return ONLY valid JSON. The TOP-LEVEL keys MUST be exactly "quiz" (an ARRAY with 3 items) and "project" (an OBJECT). Nothing else at the top level. NO wrapper key. NO markdown code fences.
+
 {
   "quiz": [
-    { "q": "...", "options": ["A","B","C","D"], "correct": 0, "explanation": "..." },
-    ...3 total
+    { "q": "<scenario question>", "options": ["<A>", "<B>", "<C>", "<D>"], "correct": 0, "explanation": "<1-2 short sentences>" },
+    { "q": "<scenario question>", "options": ["<A>", "<B>", "<C>", "<D>"], "correct": 0, "explanation": "<1-2 short sentences>" },
+    { "q": "<scenario question>", "options": ["<A>", "<B>", "<C>", "<D>"], "correct": 0, "explanation": "<1-2 short sentences>" }
   ],
   "project": {
-    "title": "...",
-    "brief": "<2-3 sentence project description>",
-    "deliverables": ["...", "..."],
-    "skillsDemonstrated": ["...", "..."],
+    "title": "<short title>",
+    "brief": "<2 sentences max>",
+    "deliverables": ["<item>", "<item>", "<item>"],
+    "skillsDemonstrated": ["<skill>", "<skill>", "<skill>"],
     "estimatedHours": 4,
     "isPortfolioArtifact": true
   }
@@ -87,7 +91,7 @@ Return only JSON.`;
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 1500,
+    max_tokens: 2000,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
@@ -96,18 +100,47 @@ Return only JSON.`;
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
-  const parsed = parseAgentJson<{ quiz?: unknown[]; project?: Record<string, unknown> }>(
-    text,
-    "Assessment Agent",
-  );
+  const parsedRaw = parseAgentJson<Record<string, unknown>>(text, "Assessment Agent");
 
-  // Defensive: when Haiku's structured JSON shape is off (output truncated,
-  // wrapped, flat, or missing a field), don't throw and break the whole
-  // bridge build. Coerce to safe defaults so the rest of the path renders.
-  // Log the bad shape for diagnostics.
-  if (!Array.isArray(parsed.quiz) || typeof parsed.project !== "object" || parsed.project === null) {
+  // Defensive coercion: Haiku occasionally returns the right data nested under
+  // a wrapper key, or with quiz as an object instead of array. Try to recover
+  // before we give up and return the stub.
+  function coerceQuiz(input: unknown): unknown[] | null {
+    if (Array.isArray(input)) return input;
+    // Common bad shape: object with numeric keys or "0", "1", "2" string keys
+    if (input && typeof input === "object") {
+      const values = Object.values(input as Record<string, unknown>);
+      if (values.length > 0 && values.every((v) => v && typeof v === "object")) {
+        return values;
+      }
+    }
+    return null;
+  }
+  function coerceProject(input: unknown): Record<string, unknown> | null {
+    if (input && typeof input === "object" && !Array.isArray(input)) {
+      return input as Record<string, unknown>;
+    }
+    return null;
+  }
+
+  // Try direct shape first. If wrapped (e.g., { assessment: { quiz, project } }),
+  // unwrap and retry one level deep.
+  let quiz = coerceQuiz(parsedRaw.quiz);
+  let project = coerceProject(parsedRaw.project);
+  if ((!quiz || !project) && typeof parsedRaw === "object") {
+    for (const v of Object.values(parsedRaw)) {
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        const inner = v as Record<string, unknown>;
+        if (!quiz) quiz = coerceQuiz(inner.quiz);
+        if (!project) project = coerceProject(inner.project);
+        if (quiz && project) break;
+      }
+    }
+  }
+
+  if (!quiz || !project) {
     console.warn(
-      "[assessment] malformed JSON shape, returning empty stub. Bad output:",
+      "[assessment] malformed JSON shape after coercion, returning empty stub. Bad output:",
       text.slice(0, 500),
     );
     return {
@@ -123,11 +156,8 @@ Return only JSON.`;
       },
     };
   }
-
-  const project = parsed.project;
-
   return {
-    quiz: parsed.quiz.map((q: any) => ({
+    quiz: quiz.map((q: any) => ({
       q: String(q.q ?? ""),
       options: Array.isArray(q.options) ? q.options.map((o: unknown) => String(o)) : [],
       correct: Number.isInteger(q.correct) ? q.correct : 0,
