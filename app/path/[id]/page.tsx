@@ -1,9 +1,9 @@
 "use client";
 
-import { use, useMemo, useState } from "react";
+import { FormEvent, use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { Card } from "@/components/retroui/Card";
@@ -243,7 +243,167 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
           />
         )}
       </div>
+
+      {/* Floating counselor chat — Sonnet with full path context */}
+      <CounselorWidget pathId={pathId} />
     </main>
+  );
+}
+
+/* ===== Counselor widget — floating chat with full path context ===== */
+
+function CounselorWidget({ pathId }: { pathId: Id<"paths"> }) {
+  const [open, setOpen] = useState(false);
+  const messages = useQuery(api.counselorMessages.listMessages, { pathId });
+  const askCounselor = useAction(api.counselor.ask);
+  const [draft, setDraft] = useState("");
+  const [sending, setSending] = useState(false);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (open && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages?.length, open, sending]);
+
+  async function onSend(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const trimmed = draft.trim();
+    if (!trimmed || sending) return;
+    setSending(true);
+    setDraft("");
+    try {
+      await askCounselor({ pathId, message: trimmed });
+    } catch (err) {
+      console.error("[counselor] send failed:", err);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <>
+      {/* Toggle button — bottom-right floating */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="fixed bottom-5 right-5 z-30 border-2 border-black bg-primary text-primary-foreground rounded-full px-5 py-3 font-head shadow-md hover:shadow-none active:translate-y-1 transition-all"
+      >
+        {open ? "Close counselor" : "💬 Ask the counselor"}
+      </button>
+
+      {/* Chat panel */}
+      {open && (
+        <aside className="fixed bottom-24 right-5 z-30 w-[min(420px,calc(100vw-2rem))] max-h-[70vh] flex flex-col border-2 border-black bg-card rounded shadow-md">
+          <header className="border-b-2 border-black bg-primary/30 px-4 py-2.5">
+            <Text as="p" className="font-head text-sm">
+              AI Career Counselor
+            </Text>
+            <Text as="p" className="text-xs text-muted-foreground">
+              Sonnet 4.6 · sees your full path. Ask anything.
+            </Text>
+          </header>
+
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+            {(!messages || messages.length === 0) && !sending && (
+              <div className="text-sm text-foreground/70 space-y-3">
+                <p>Try asking:</p>
+                <ul className="space-y-1.5">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setDraft("Is this transition realistic given my hours per week and age?")}
+                      className="text-left underline-offset-2 hover:underline"
+                    >
+                      &ldquo;Is this transition realistic for me?&rdquo;
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setDraft("What 3 careers similar to my target would you recommend I also consider?")}
+                      className="text-left underline-offset-2 hover:underline"
+                    >
+                      &ldquo;What 3 adjacent careers should I also consider?&rdquo;
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setDraft("Realistically, when should I expect my first interview if I follow this path?")}
+                      className="text-left underline-offset-2 hover:underline"
+                    >
+                      &ldquo;When could I realistically land my first interview?&rdquo;
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setDraft("Which credentials should I prioritize for my situation? Skip the marketing.")}
+                      className="text-left underline-offset-2 hover:underline"
+                    >
+                      &ldquo;Which credentials actually matter for me?&rdquo;
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+            {messages?.map((m) => (
+              <CounselorMessage key={m._id} role={m.role} content={m.content} />
+            ))}
+            {sending && (
+              <div className="text-sm text-muted-foreground italic">
+                Counselor is thinking…
+              </div>
+            )}
+          </div>
+
+          <form
+            onSubmit={onSend}
+            className="border-t-2 border-black p-2 flex items-end gap-2"
+          >
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onSend(e as unknown as FormEvent<HTMLFormElement>);
+                }
+              }}
+              placeholder="Ask anything about your path…"
+              rows={1}
+              disabled={sending}
+              className="flex-1 resize-none border-2 border-black rounded px-2 py-1.5 text-sm bg-card focus:outline-none"
+              style={{ minHeight: "36px", maxHeight: "120px" }}
+            />
+            <button
+              type="submit"
+              disabled={sending || draft.trim().length === 0}
+              className="border-2 border-black bg-primary text-primary-foreground rounded px-3 py-1.5 font-head text-sm shadow-sm hover:shadow-none active:translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Send
+            </button>
+          </form>
+        </aside>
+      )}
+    </>
+  );
+}
+
+function CounselorMessage({ role, content }: { role: string; content: string }) {
+  if (role === "user") {
+    return (
+      <div className="ml-6 border-2 border-black bg-primary/20 rounded px-3 py-2 text-sm whitespace-pre-wrap break-words">
+        {content}
+      </div>
+    );
+  }
+  return (
+    <div className="mr-6 border-2 border-black bg-card rounded px-3 py-2 text-sm whitespace-pre-wrap break-words leading-relaxed">
+      {content}
+    </div>
   );
 }
 

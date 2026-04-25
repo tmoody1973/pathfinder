@@ -71,6 +71,15 @@ export default defineSchema({
     finishedAt: v.optional(v.number()),
   }).index("by_path", ["pathId"]),
 
+  // Counselor chat: messages persisted per path so the user can refresh
+  // mid-conversation without losing context. Anonymous-session-scoped.
+  counselorMessages: defineTable({
+    pathId: v.id("paths"),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    createdAt: v.number(),
+  }).index("by_path", ["pathId"]),
+
   modules: defineTable({
     pathId: v.id("paths"),
     moduleNumber: v.optional(v.number()),  // 1..N within the path's outline. Optional for backward-compat with rows from before this field existed.
