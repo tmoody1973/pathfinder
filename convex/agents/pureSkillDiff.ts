@@ -16,7 +16,12 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { parseAgentJson } from "../lib/parseJson";
-import type { SkillDiffResult } from "./skillDiff";
+import type {
+  SkillDiffResult,
+  PathOutline,
+  PathOutlinePhase,
+  PathOutlineModule,
+} from "./skillDiff";
 import type { ONetCompetency } from "../lib/onet";
 import type { SemanticLookupResult } from "../lib/onetFuzzy";
 
@@ -68,6 +73,21 @@ COMPUTE THE BRIDGE:
 - bloomLevel: Remember | Understand | Apply | Analyze | Evaluate | Create. Big pivots start at Understand/Apply.
 - estimatedHours: 2-6 for a single bridge module.
 
+ALSO produce a 4-phase learning path OUTLINE. This is a STRUCTURE, not content — just the module names and metadata. Content generation happens per-module on-demand.
+
+Phases (use these exact names):
+  Phase 1: Foundations (Bloom's: Remember + Understand) — vocabulary, mental models, field orientation
+  Phase 2: Core Skills (Bloom's: Apply + Analyze) — hands-on practice of the specific bridge competencies
+  Phase 3: Applied (Bloom's: Evaluate + Create) — real-world application, judgment, portfolio work
+  Phase 4: Portfolio + Launch (Bloom's: Synthesize) — capstone, resume, interview prep, community integration
+
+PATH DESIGN RULES:
+- Total modules: 10-12 across all 4 phases (typically 3-3-3-2 or 3-3-2-2 distribution)
+- Each module: 2-4 estimated hours, ONE specific skill/topic (not a broad area), Bloom's level matches its phase
+- Module names: SHORT and SPECIFIC (e.g. "Signal Flow & Gain Staging", NOT "Introduction to Audio Engineering")
+- Topics progress: foundational → applied → synthesis across phases. Dependency order matters.
+- MARK THE PRIMARY BRIDGE MODULE: one module gets "isPrimaryBridge": true — this is the module tied to the headline bridge competency. It's typically in Phase 1 or Phase 2 (where the bridge from current to target is most directly addressed).
+
 Return ONLY valid JSON with this exact shape:
 {
   "current": {
@@ -83,6 +103,32 @@ Return ONLY valid JSON with this exact shape:
     "socHint": "closest O*NET SOC code",
     "knowledge": [...],
     "skills": [...]
+  },
+  "pathOutline": {
+    "title": "Path name in the form 'Become a <target>' or 'Transition to <target>'",
+    "totalWeeks": 6 | 8 | 10 | 12,
+    "totalHours": <sum of all module hours>,
+    "phases": [
+      {
+        "number": 1,
+        "title": "Phase 1: Foundations",
+        "bloomLevels": "Remember + Understand",
+        "weekRange": "Weeks 1-2",
+        "modules": [
+          {
+            "number": 1,
+            "title": "<specific module name>",
+            "topic": "<one-line description of what this module teaches>",
+            "skillDomain": "<knowledge or skill name this module develops>",
+            "bloomLevel": "Understand",
+            "estimatedHours": 3,
+            "weekRange": "Week 1",
+            "isPrimaryBridge": false
+          }
+        ]
+      }
+      // ... 4 phases total
+    ]
   },
   "diff": {
     "gainedKnowledge": [{ "name": "...", "importance": 0-100, "level": 0-100 }, ...],
@@ -190,6 +236,7 @@ Produce the full structured analysis per the system prompt. Return only JSON.`;
     target?: any;
     diff?: any;
     headline?: any;
+    pathOutline?: any;
   }>(text, "Pure Skill Diff (Opus)");
 
   const current = parsed.current ?? {};
@@ -275,5 +322,85 @@ Produce the full structured analysis per the system prompt. Return only JSON.`;
       estimatedHours:
         clamp(toNumber(headline.estimatedHours), 2, 8) || 4,
     },
+    pathOutline: normalizePathOutline(parsed.pathOutline),
+  };
+}
+
+const VALID_BLOOMS: SkillDiffResult["headline"]["bloomLevel"][] = [
+  "Remember",
+  "Understand",
+  "Apply",
+  "Analyze",
+  "Evaluate",
+  "Create",
+];
+
+function normalizeBloom(raw: unknown): SkillDiffResult["headline"]["bloomLevel"] {
+  const v = String(raw ?? "Apply");
+  return VALID_BLOOMS.includes(v as any)
+    ? (v as SkillDiffResult["headline"]["bloomLevel"])
+    : "Apply";
+}
+
+function normalizePathOutline(raw: any): PathOutline | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const phasesRaw = Array.isArray(raw.phases) ? raw.phases : [];
+  if (phasesRaw.length === 0) return undefined;
+
+  let runningModuleNumber = 0;
+  let totalHours = 0;
+
+  const phases: PathOutlinePhase[] = phasesRaw.map((p: any, i: number) => {
+    const phaseNumber = ((p?.number as number) ?? i + 1) as 1 | 2 | 3 | 4;
+    const modulesRaw = Array.isArray(p?.modules) ? p.modules : [];
+    const modules: PathOutlineModule[] = modulesRaw.map((m: any) => {
+      runningModuleNumber += 1;
+      const hours = clamp(toNumber(m?.estimatedHours), 1, 8) || 3;
+      totalHours += hours;
+      return {
+        number: typeof m?.number === "number" ? m.number : runningModuleNumber,
+        title: String(m?.title ?? "Untitled module"),
+        topic: String(m?.topic ?? ""),
+        skillDomain: String(m?.skillDomain ?? ""),
+        bloomLevel: normalizeBloom(m?.bloomLevel),
+        estimatedHours: hours,
+        weekRange: String(m?.weekRange ?? ""),
+        isPrimaryBridge: Boolean(m?.isPrimaryBridge),
+      };
+    });
+
+    return {
+      number: phaseNumber,
+      title: String(p?.title ?? `Phase ${phaseNumber}`),
+      bloomLevels: String(p?.bloomLevels ?? ""),
+      weekRange: String(p?.weekRange ?? ""),
+      modules,
+    };
+  });
+
+  // Ensure exactly one module is marked primary; if Opus failed, mark the
+  // first module of phase 2 (or phase 1 if phase 2 has none) as the bridge.
+  const flatModules = phases.flatMap((p) => p.modules);
+  const primaryCount = flatModules.filter((m) => m.isPrimaryBridge).length;
+  if (primaryCount === 0 && flatModules.length > 0) {
+    const phase2First = phases.find((p) => p.number === 2)?.modules[0];
+    const fallback = phase2First ?? flatModules[0];
+    fallback.isPrimaryBridge = true;
+  } else if (primaryCount > 1) {
+    // Keep only the first primary
+    let kept = false;
+    for (const m of flatModules) {
+      if (m.isPrimaryBridge) {
+        if (kept) m.isPrimaryBridge = false;
+        else kept = true;
+      }
+    }
+  }
+
+  return {
+    title: String(raw.title ?? ""),
+    totalWeeks: clamp(toNumber(raw.totalWeeks), 4, 16) || 8,
+    totalHours: typeof raw.totalHours === "number" ? raw.totalHours : totalHours,
+    phases,
   };
 }

@@ -138,6 +138,7 @@ export const setStatus = internalMutation({
     currentReasoning: v.optional(v.string()),
     targetONET: v.optional(v.string()),
     targetReasoning: v.optional(v.string()),
+    pathOutline: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const { pathId, ...rest } = args;

@@ -19,23 +19,52 @@ import { semanticOnetLookup, type SemanticLookupResult } from "../lib/onetFuzzy"
 import { computeCareerDiff, type CareerDiff, type ONetCompetency } from "../lib/onet";
 import { parseAgentJson } from "../lib/parseJson";
 
+export interface PathOutlineModule {
+  number: number;             // module number within the whole path (1..N)
+  title: string;
+  topic: string;
+  skillDomain: string;
+  bloomLevel: "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create";
+  estimatedHours: number;
+  weekRange: string;          // e.g. "Week 1"
+  isPrimaryBridge: boolean;   // exactly ONE module across the whole path has this true
+}
+
+export interface PathOutlinePhase {
+  number: 1 | 2 | 3 | 4;
+  title: string;              // e.g. "Phase 1: Foundations"
+  bloomLevels: string;        // e.g. "Remember + Understand"
+  weekRange: string;          // e.g. "Weeks 1-2"
+  modules: PathOutlineModule[];
+}
+
+export interface PathOutline {
+  title: string;
+  totalWeeks: number;
+  totalHours: number;
+  phases: PathOutlinePhase[];
+}
+
 export interface SkillDiffResult {
-  // Resolution outputs (from Phase 1)
+  // Resolution outputs
   current: SemanticLookupResult;
   target: SemanticLookupResult;
 
-  // Deterministic diff (from Phase 2)
+  // Deterministic diff
   diff: CareerDiff;
 
-  // LLM-narrated headline (from Phase 3 — Opus)
+  // LLM-narrated headline — refers to the primary-bridge module in pathOutline
   headline: {
     primaryBridge: ONetCompetency;
     primaryBridgeType: "knowledge" | "skill";
-    framing: string;          // 1-2 sentence narrative shown in the UI
-    moduleTopic: string;      // what the Lesson Agent should write about
+    framing: string;
+    moduleTopic: string;
     bloomLevel: "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create";
-    estimatedHours: number;   // pacing estimate for the bridge module
+    estimatedHours: number;
   };
+
+  // Multi-module path outline — generated upfront, content per module is lazy
+  pathOutline?: PathOutline;
 }
 
 const OPUS_SYSTEM_PROMPT = `You are the Skill Diff Agent for PathFinder, a career-pivot learning platform.

@@ -72,39 +72,62 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
           ← Try another bridge
         </Link>
 
-        {/* Breadcrumb + title — matches sample module header */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-            <Badge variant="surface" size="sm">
-              {path.currentCareer} → {path.targetCareer}
-            </Badge>
-            <span>›</span>
-            <span>Bridge Module</span>
-            <span>›</span>
-            <span>1/1</span>
-          </div>
-          <Text as="h1" className="text-3xl md:text-4xl mt-3">
-            {skillDiffOutput?.headline?.moduleTopic ?? "Generating your bridge..."}
-          </Text>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {skillDiffOutput && (
-              <>
-                <Badge size="sm" variant="default">
-                  {skillDiffOutput.headline?.estimatedHours ?? 4}h
+        {/* Breadcrumb + title — Path > Phase > Module N/total */}
+        {(() => {
+          const outline = path.pathOutline;
+          const flat = outline?.phases?.flatMap((p: any) => p.modules) ?? [];
+          const totalModules = flat.length;
+          const featured = flat.find((m: any) => m.isPrimaryBridge) ?? flat[0];
+          const featuredPhase = outline?.phases?.find((p: any) =>
+            p.modules?.some((m: any) => m.number === featured?.number),
+          );
+          return (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+                <Badge variant="surface" size="sm">
+                  {outline?.title ?? `${path.currentCareer} → ${path.targetCareer}`}
                 </Badge>
-                <Badge size="sm" variant="default">
-                  Bloom&apos;s: {skillDiffOutput.headline?.bloomLevel}
-                </Badge>
-                <Badge size="sm" variant="default">
-                  O*NET: {path.targetONET}
-                </Badge>
-                <Badge size="sm" variant="surface">
-                  Bridge: {skillDiffOutput.headline?.primaryBridge?.name}
-                </Badge>
-              </>
-            )}
-          </div>
-        </div>
+                {featuredPhase && (
+                  <>
+                    <span>›</span>
+                    <span>{featuredPhase.title}</span>
+                  </>
+                )}
+                {featured && totalModules > 0 && (
+                  <>
+                    <span>›</span>
+                    <span>Module {featured.number}/{totalModules}</span>
+                  </>
+                )}
+              </div>
+              <Text as="h1" className="text-3xl md:text-4xl mt-3">
+                {featured?.title ?? skillDiffOutput?.headline?.moduleTopic ?? "Generating your bridge..."}
+              </Text>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {featured && (
+                  <Badge size="sm" variant="default">
+                    {featured.weekRange || `${featured.estimatedHours}h`}
+                  </Badge>
+                )}
+                {skillDiffOutput && (
+                  <>
+                    <Badge size="sm" variant="default">
+                      Bloom&apos;s: {featured?.bloomLevel ?? skillDiffOutput.headline?.bloomLevel}
+                    </Badge>
+                    {featured?.skillDomain && (
+                      <Badge size="sm" variant="default">
+                        Skill: {featured.skillDomain}
+                      </Badge>
+                    )}
+                    <Badge size="sm" variant="surface">
+                      Bridge: {skillDiffOutput.headline?.primaryBridge?.name}
+                    </Badge>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Career resolution strip — concise */}
         {(path.currentReasoning || path.targetReasoning) && (
@@ -117,6 +140,11 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
             )}
           </div>
         )}
+
+        {/* Full path outline — all 4 phases × 10-12 modules. Featured module is
+            highlighted; the rest are listed but their content isn't generated
+            yet (on-demand generation is the next iteration). */}
+        {path.pathOutline && <PathOutlineView outline={path.pathOutline} />}
 
         {/* Progress / agent fan-out */}
         <AgentPipeline agentRuns={agentRuns} pathStatus={path.status} />
@@ -146,6 +174,79 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
         )}
       </div>
     </main>
+  );
+}
+
+/* ===== Path outline — full 4-phase × N-module roadmap ===== */
+
+const PHASE_COLORS: Record<number, string> = {
+  1: "bg-emerald-100",
+  2: "bg-primary/30",
+  3: "bg-accent",
+  4: "bg-secondary/20",
+};
+
+function PathOutlineView({ outline }: { outline: any }) {
+  return (
+    <div className="mt-8">
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
+          Your full learning path
+        </Text>
+        <Text as="p" className="text-xs text-muted-foreground">
+          {outline.totalWeeks ?? 8} weeks · {outline.totalHours ?? 30}h ·{" "}
+          {(outline.phases ?? []).reduce((acc: number, p: any) => acc + (p.modules?.length ?? 0), 0)}{" "}
+          modules
+        </Text>
+      </div>
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {(outline.phases ?? []).map((phase: any) => (
+          <div
+            key={phase.number}
+            className={`border-2 border-black rounded p-3 ${PHASE_COLORS[phase.number] ?? "bg-card"}`}
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <Text as="p" className="font-head text-base">
+                {phase.title}
+              </Text>
+              <Text as="p" className="text-xs">
+                {phase.weekRange}
+              </Text>
+            </div>
+            {phase.bloomLevels && (
+              <Text as="p" className="text-xs text-muted-foreground mt-0.5">
+                Bloom&apos;s: {phase.bloomLevels}
+              </Text>
+            )}
+            <ul className="mt-2 space-y-1">
+              {(phase.modules ?? []).map((m: any) => (
+                <li
+                  key={m.number}
+                  className={`text-sm flex items-baseline gap-2 ${m.isPrimaryBridge ? "font-head" : ""}`}
+                >
+                  <span className="text-xs text-muted-foreground w-7 flex-shrink-0">
+                    M{m.number}
+                  </span>
+                  <span className="flex-1 min-w-0">{m.title}</span>
+                  <span className="text-xs text-muted-foreground flex-shrink-0">
+                    {m.estimatedHours}h
+                  </span>
+                  {m.isPrimaryBridge && (
+                    <Badge size="sm" variant="solid" className="flex-shrink-0">
+                      Featured
+                    </Badge>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <Text as="p" className="mt-3 text-xs text-muted-foreground">
+        The featured module&apos;s full content is generated below. Other modules
+        will generate on-demand when you click into them (coming next).
+      </Text>
+    </div>
   );
 }
 

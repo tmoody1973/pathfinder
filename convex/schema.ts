@@ -37,6 +37,7 @@ export default defineSchema({
       v.literal("timeout"),
     ),
     errorReason: v.optional(v.string()),
+    pathOutline: v.optional(v.any()),  // generated upfront with skillDiff: phases + modules + bridge marker
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
 

@@ -102,6 +102,7 @@ export const run = internalAction({
         currentReasoning: skillDiff.current.reasoning,
         targetONET: skillDiff.target.socCode,
         targetReasoning: skillDiff.target.reasoning,
+        pathOutline: skillDiff.pathOutline,
       });
 
       await ctx.runMutation(internal.agentRuns.markDone, {
