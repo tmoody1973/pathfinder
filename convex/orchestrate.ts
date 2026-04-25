@@ -174,7 +174,7 @@ export const run = internalAction({
       ctx,
       newsRunId,
       "news",
-      () => withTimeout(runNewsAgent(skillDiff), AGENT_TIMEOUT_MS, "news"),
+      () => withTimeout(runNewsAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "news"),
     );
 
     const [
