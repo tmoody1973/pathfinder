@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* RetroUI theme — neo-brutalism aesthetic.
+   Variables match the conventions used by RetroUI components (button, card,
+   badge, etc.) which expect Tailwind classes like bg-primary, bg-primary-hover,
+   border-2 border-black, font-head, font-sans. */
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  /* Type — Archivo Black for display, Space Grotesk for body */
+  --font-head: var(--font-archivo-black);
+  --font-sans: var(--font-space-grotesk);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Base */
+  --color-background: #fefae0;
+  --color-foreground: #171717;
+  --color-card: #ffffff;
+  --color-card-foreground: #171717;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-border: #000000;
+
+  /* Brand */
+  --color-primary: #ffd34e;
+  --color-primary-hover: #ffc107;
+  --color-primary-foreground: #000000;
+
+  --color-secondary: #2563eb;
+  --color-secondary-hover: #1e40af;
+  --color-secondary-foreground: #ffffff;
+
+  --color-accent: #ffe9a8;
+  --color-accent-foreground: #171717;
+
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #ffffff;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
