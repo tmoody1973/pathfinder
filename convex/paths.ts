@@ -1,4 +1,4 @@
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { v, ConvexError } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -106,7 +106,16 @@ export const listForSession = query({
   },
 });
 
-// === Internal mutations used by the orchestrator action ===
+// === Internal helpers used by the orchestrator action ===
+
+/** Internal query: read a path inside the orchestrator action. (Node-runtime
+ *  files like orchestrate.ts cannot define queries themselves.) */
+export const getInternal = internalQuery({
+  args: { pathId: v.id("paths") },
+  handler: async (ctx, { pathId }): Promise<Doc<"paths"> | null> => {
+    return await ctx.db.get(pathId);
+  },
+});
 
 /**
  * Set the lifecycle status on a path. Optionally set errorReason (for status === "error").

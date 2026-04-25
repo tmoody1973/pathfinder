@@ -9,10 +9,14 @@
  */
 
 import type * as agentRuns from "../agentRuns.js";
+import type * as agents_assessment from "../agents/assessment.js";
+import type * as agents_lesson from "../agents/lesson.js";
+import type * as agents_resource from "../agents/resource.js";
 import type * as agents_skillDiff from "../agents/skillDiff.js";
 import type * as lib_onet from "../lib/onet.js";
 import type * as lib_onetFuzzy from "../lib/onetFuzzy.js";
 import type * as lib_youtube from "../lib/youtube.js";
+import type * as modules from "../modules.js";
 import type * as orchestrate from "../orchestrate.js";
 import type * as paths from "../paths.js";
 import type * as sessions from "../sessions.js";
@@ -25,10 +29,14 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   agentRuns: typeof agentRuns;
+  "agents/assessment": typeof agents_assessment;
+  "agents/lesson": typeof agents_lesson;
+  "agents/resource": typeof agents_resource;
   "agents/skillDiff": typeof agents_skillDiff;
   "lib/onet": typeof lib_onet;
   "lib/onetFuzzy": typeof lib_onetFuzzy;
   "lib/youtube": typeof lib_youtube;
+  modules: typeof modules;
   orchestrate: typeof orchestrate;
   paths: typeof paths;
   sessions: typeof sessions;
