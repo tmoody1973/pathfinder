@@ -27,50 +27,73 @@ export interface ResourceResult {
 
 const QUERY_GEN_SYSTEM_PROMPT = `You generate YouTube search queries for educational content about a specific competency in a CAREER CONTEXT.
 
-CRITICAL RULES:
-1. Every query MUST include a target-career-specific anchor term that distinguishes from adjacent fields:
-   - UX/UI/Product Designer → include "UX", "UI", "user interface", "product design", "web design", or "interaction design"
-   - Software Developer / Web Developer → include "programming", "software", "web development", or a language name
-   - Graphic Designer → include "graphic design", "logo design", or "branding"
-   - Game Designer → include "game design", "game dev", "Unity", or "Unreal"
-   - Other fields → include the most specific career-community term
+Your queries must surface the REAL YouTube corpus of the target career — not merely adjacent content that also contains the word "design" or "tutorial."
 
-   The bridge competency alone (e.g., "Design") is too broad — YouTube will return everything from environment art to logo design. The career anchor disambiguates.
+CRITICAL RULE: Use TOOL + ARTIFACT vocabulary specific to the target career. Generic words like "design fundamentals" pull game-dev, environment art, and motion-graphics content that crowds out the target field. You must anchor on what practitioners in the target career actually DO in their day-to-day work.
 
-2. Each query should target EDUCATIONAL content (tutorial, course, fundamentals, explainer), not vlogs or commentary.
+Career-specific good queries (study these patterns):
 
-3. Queries should be DIVERSE — different angles on the bridge. Don't generate near-duplicates.
+UX/UI/Product Designer (SOC 15-1255.00):
+- "Figma wireframe tutorial beginner"
+- "NN Nielsen Norman Group user research methods"
+- "Design sprint AJSmart week by week"
+- "product design portfolio review senior UX"
+- "user interface design hierarchy tutorial figma"
+Why good: "Figma", "NN/g", "user research", "design sprint" — only UX content uses these. No game-dev video will ever rank for "Figma wireframe tutorial."
 
-4. Don't include the learner's CURRENT career in the query (e.g., don't say "UX design for radio hosts"). YouTube has almost none of that. Target the target-career community where good educational content actually exists.
+Software Developer (15-1252.00):
+- "freeCodeCamp full course JavaScript beginner"
+- "React hooks useState tutorial 2025"
+- "building REST API Node Express walkthrough"
 
-Bad queries (will pull irrelevant results):
-- "Design principles tutorial" → pulls game design, environment art, motion graphics
-- "Visual design fundamentals" → too generic
-- "Career change to UX design" → vlogs and pep talks, not tutorials
+Graphic Designer (27-1024.00):
+- "logo design Illustrator pen tool beginner"
+- "typography pairing brand identity"
+- "Aaron Draplin logo design process"
 
-Good queries:
-- "UX design fundamentals for beginners"
-- "Visual hierarchy in user interface design"
-- "Typography in product design tutorial"
+Data Scientist (15-2051.00):
+- "pandas dataframe tutorial Jupyter"
+- "Andrew Ng machine learning specialization review"
+- "Kaggle Titanic walkthrough Python"
+
+PATTERN: Real tool name + specific artifact + optional practitioner name.
+ANTI-PATTERN: "Design fundamentals", "visual principles tutorial", "career change to X" — too broad, returns wrong-field content.
+
+Additional rules:
+- Three queries total, each different angle on the bridge competency
+- Don't mention the learner's CURRENT career in queries (YouTube has almost no "UX for radio hosts" content)
+- Avoid year stamps like "2024" — they pull content-farm videos
+- Avoid "career change to X" phrasing — it pulls vlog/pep-talk content, not tutorials
 
 Return ONLY valid JSON: { "queries": ["query 1", "query 2", "query 3"] }`;
 
-const RELEVANCE_FILTER_SYSTEM_PROMPT = `You score YouTube videos for educational relevance to a specific career transition. Be STRICT. Adjacent fields don't count.
+const RELEVANCE_FILTER_SYSTEM_PROMPT = `You score YouTube videos for educational relevance to a specific career transition. BE RUTHLESS.
 
 Scoring scale (0-100):
-- 90-100: Directly teaches the target competency in the target-career context
-- 70-89: Closely related, useful background, same field family
-- 40-69: Adjacent field (e.g., game design when learning UX, motion graphics when learning UI) — partially applicable but not on-target
-- 0-39: Off-topic, will confuse the learner or waste their time
+- 90-100: Directly teaches the target competency in the TARGET CAREER's actual day-to-day work context, using that career's tools and vocabulary
+- 75-89: Closely related — same career family, useful background, same work environment
+- 50-74: Adjacent FIELD (DIFFERENT career, overlapping vocabulary) — examples below
+- 20-49: Weakly related, mostly off-topic
+- 0-19: Totally off-topic
 
-DISQUALIFY decisively when a video clearly belongs to a different field:
-- Target is UX/UI/web design? Score game design, environment art, motion graphics, or pure illustration tutorials BELOW 50.
-- Target is software development? Score pure design or visual-tutorial content BELOW 50.
-- Target is healthcare or law? Score business/marketing tutorials BELOW 50.
+CRITICAL — these are DIFFERENT career families, not adjacent:
+- UX/UI/Product Design (tools: Figma, Sketch, Adobe XD; artifacts: wireframes, prototypes, user flows, design systems) is a DIFFERENT FAMILY from:
+    - Game Design / Game Development (tools: Unity, Unreal, Blender; artifacts: levels, characters, game logic) → score 50 max
+    - Environment Art / 3D Art → score 40 max
+    - Motion Graphics / After Effects / VFX → score 40 max
+    - Graphic Design / Logo Design / Illustration (tools: Illustrator, Photoshop; artifacts: logos, posters, branding) → score 55 max (closer than game, but still a different discipline)
+- Software Development / Programming is a DIFFERENT FAMILY from any pure design discipline → score mutual cases 40-55 max
+- Data Science is a DIFFERENT FAMILY from general-purpose software tutorials → score 40-60 max
 
-Title alone often tells you. Be willing to score lots of videos under 60.
+The word "design" appearing in both "UX design" and "game design" and "graphic design" and "motion design" DOES NOT make them the same family. Do not be lenient.
 
-Return ONLY valid JSON: { "scores": [{ "index": 0, "score": 85, "reason": "1 short sentence" }, ...] } — one entry per input video, in any order.`;
+A video titled "20 Game Dev Tips I Wish I Was Told Earlier" — if the target is UX Designer — scores 30. It's a GAME DEV video. It has zero Figma, zero wireframes, zero user research. A UX learner watching it learns nothing applicable.
+
+A video titled "UX Design Fundamentals with Figma" — if the target is UX Designer — scores 90. Right tool, right artifact, right context.
+
+Be willing to score the MAJORITY of candidates under 75. A typical candidate pool has 15 videos with maybe 4-6 that are genuinely on-target. Identify them strictly.
+
+Return ONLY valid JSON: { "scores": [{ "index": 0, "score": 85, "reason": "1 short sentence" }, ...] } — one entry per input video.`;
 
 async function generateQueries(
   anthropic: Anthropic,

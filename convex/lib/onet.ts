@@ -21,6 +21,7 @@
  */
 
 import onetData from "../data/onet.json";
+import titleOverridesData from "../data/titleOverrides.json";
 
 // === Types ===
 
@@ -34,8 +35,16 @@ export interface ONetCompetency {
 export interface ONetOccupation {
   title: string;
   description: string;
+  altTitles: string[];            // O*NET Alternate Titles for this SOC
   skills: ONetCompetency[];
   knowledge: ONetCompetency[];
+}
+
+export interface TitleOverride {
+  socCode: string;
+  title: string;
+  reasoning: string;
+  confidence: "high" | "medium" | "low";
 }
 
 export interface ONetLookupResult {
@@ -72,41 +81,113 @@ const OVERLAP_TOLERANCE = 15;
 
 const ONET: Record<string, ONetOccupation> = onetData as any;
 
-const titleIndex: Array<{ socCode: string; titleLower: string; title: string }> =
-  Object.entries(ONET).map(([socCode, occ]) => ({
-    socCode,
-    title: occ.title,
-    titleLower: occ.title.toLowerCase(),
-  }));
+const OVERRIDES: Record<string, TitleOverride> =
+  (titleOverridesData as { overrides?: Record<string, TitleOverride> }).overrides ?? {};
+
+// === Full-text index combining official titles + all O*NET Alternate Titles ===
+// Each entry points to its SOC code and records whether it's the primary or an alternate.
+interface IndexEntry {
+  socCode: string;
+  text: string;        // original casing
+  textLower: string;
+  kind: "primary" | "alternate";
+}
+
+const titleIndex: IndexEntry[] = (() => {
+  const entries: IndexEntry[] = [];
+  for (const [socCode, occ] of Object.entries(ONET)) {
+    entries.push({
+      socCode,
+      text: occ.title,
+      textLower: occ.title.toLowerCase(),
+      kind: "primary",
+    });
+    for (const alt of occ.altTitles ?? []) {
+      entries.push({
+        socCode,
+        text: alt,
+        textLower: alt.toLowerCase(),
+        kind: "alternate",
+      });
+    }
+  }
+  return entries;
+})();
 
 // === Public functions ===
 
+/**
+ * Three-layer static lookup:
+ *   1. titleOverrides.json — hand-curated fixes for modern titles O*NET miscategorizes
+ *   2. Exact title/alt-title match against the 894-occupation + 48k-alt-title index
+ *   3. Token-overlap fuzzy match against the same index
+ *
+ * Returns null if no match above minimum confidence. Caller (semanticOnetLookup)
+ * then falls back to an LLM if null.
+ */
 export function onetLookup(query: string): ONetLookupResult | null {
   if (!query || query.trim().length === 0) return null;
   const q = query.trim().toLowerCase();
 
-  // 1. Exact substring match
-  const exact = titleIndex.find((t) => t.titleLower.includes(q));
-  if (exact) {
-    return { socCode: exact.socCode, title: exact.title, closestMatch: false };
+  // Layer 1: curated overrides for titles O*NET gets wrong
+  const override = OVERRIDES[q];
+  if (override && ONET[override.socCode]) {
+    return {
+      socCode: override.socCode,
+      title: override.title,
+      closestMatch: false,
+    };
   }
 
-  // 2. Token-overlap fuzzy match
+  // Layer 2a: exact alt-title or official-title match (whole-string equality)
+  const exactEq = titleIndex.find((t) => t.textLower === q);
+  if (exactEq) {
+    const occ = ONET[exactEq.socCode];
+    return {
+      socCode: exactEq.socCode,
+      title: occ?.title ?? exactEq.text,
+      closestMatch: false,
+    };
+  }
+
+  // Layer 2b: substring match (query appears inside a title or alt title)
+  const exactSub = titleIndex.find((t) => t.textLower.includes(q));
+  if (exactSub) {
+    const occ = ONET[exactSub.socCode];
+    return {
+      socCode: exactSub.socCode,
+      title: occ?.title ?? exactSub.text,
+      closestMatch: false,
+    };
+  }
+
+  // Layer 3: token-overlap fuzzy match
   const queryTokens = q.split(/\s+/).filter((t) => t.length > 2);
   if (queryTokens.length === 0) return null;
 
-  let best: { socCode: string; title: string; score: number } | null = null;
+  let best: { socCode: string; score: number } | null = null;
   for (const entry of titleIndex) {
-    const matched = queryTokens.filter((t) => entry.titleLower.includes(t)).length;
+    const matched = queryTokens.filter((t) => entry.textLower.includes(t)).length;
     if (matched === 0) continue;
     const score = matched / queryTokens.length;
     if (!best || score > best.score) {
-      best = { socCode: entry.socCode, title: entry.title, score };
+      best = { socCode: entry.socCode, score };
     }
   }
 
-  if (!best || best.score < 0.3) return null;
-  return { socCode: best.socCode, title: best.title, closestMatch: true };
+  if (!best || best.score < 0.5) return null;
+  const occ = ONET[best.socCode];
+  return {
+    socCode: best.socCode,
+    title: occ?.title ?? "",
+    closestMatch: true,
+  };
+}
+
+/** Return the curated override for a query if one exists. Used by semanticOnetLookup
+ *  to surface the rich reasoning string from the override table rather than a generic fuzzy reason. */
+export function getTitleOverride(query: string): TitleOverride | null {
+  return OVERRIDES[query.trim().toLowerCase()] ?? null;
 }
 
 export function onetSkillsForOccupation(socCode: string): ONetCompetency[] {

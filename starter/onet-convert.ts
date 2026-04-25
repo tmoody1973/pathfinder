@@ -54,6 +54,7 @@ interface ONetCompetency {
 interface ONetOccupation {
   title: string;
   description: string;
+  altTitles: string[];         // Alternate Titles.txt entries for this SOC code
   skills: ONetCompetency[];
   knowledge: ONetCompetency[];
 }
@@ -156,8 +157,26 @@ console.log("Reading Knowledge.txt...");
 const knowledgeRows = parseTSV(join(inputFolder, "Knowledge.txt"));
 console.log(`  → ${knowledgeRows.length} knowledge rows (IM + LV)`);
 
+console.log("Reading Alternate Titles.txt...");
+const altTitleRows = parseTSV(join(inputFolder, "Alternate Titles.txt"));
+console.log(`  → ${altTitleRows.length} alternate titles`);
+
 const skillsByOcc = pivotCompetencies(skillRows);
 const knowledgeByOcc = pivotCompetencies(knowledgeRows);
+
+// Build alternate titles index: SOC code → Set of alt title strings
+const altTitlesBySoc = new Map<string, Set<string>>();
+for (const row of altTitleRows) {
+  const socCode = row["O*NET-SOC Code"];
+  const alt = row["Alternate Title"];
+  if (!socCode || !alt) continue;
+  let set = altTitlesBySoc.get(socCode);
+  if (!set) {
+    set = new Set();
+    altTitlesBySoc.set(socCode, set);
+  }
+  set.add(alt.trim());
+}
 
 const occupations = new Map<string, ONetOccupation>();
 for (const row of occupationRows) {
@@ -173,9 +192,13 @@ for (const row of occupationRows) {
   skills.sort((a, b) => b.importance - a.importance);
   knowledge.sort((a, b) => b.importance - a.importance);
 
+  const altTitlesSet = altTitlesBySoc.get(socCode);
+  const altTitles = altTitlesSet ? Array.from(altTitlesSet).sort() : [];
+
   occupations.set(socCode, {
     title: row["Title"] ?? "",
     description: row["Description"] ?? "",
+    altTitles,
     skills,
     knowledge,
   });
@@ -186,6 +209,7 @@ const output: Record<string, ONetOccupation> = {};
 let droppedEmpty = 0;
 let totalSkills = 0;
 let totalKnowledge = 0;
+let totalAltTitles = 0;
 for (const [socCode, occ] of occupations.entries()) {
   if (occ.skills.length === 0 && occ.knowledge.length === 0) {
     droppedEmpty++;
@@ -194,15 +218,17 @@ for (const [socCode, occ] of occupations.entries()) {
   output[socCode] = occ;
   totalSkills += occ.skills.length;
   totalKnowledge += occ.knowledge.length;
+  totalAltTitles += occ.altTitles.length;
 }
 
 writeFileSync(outputPath, JSON.stringify(output, null, 2));
 
 const sizeKb = Math.round(JSON.stringify(output).length / 1024);
 console.log(`\n✓ Wrote ${outputPath}`);
-console.log(`  Occupations:           ${Object.keys(output).length}`);
-console.log(`  Skill rows attached:   ${totalSkills}`);
+console.log(`  Occupations:             ${Object.keys(output).length}`);
+console.log(`  Skill rows attached:     ${totalSkills}`);
 console.log(`  Knowledge rows attached: ${totalKnowledge}`);
-console.log(`  Dropped (empty):       ${droppedEmpty}`);
-console.log(`  Output size:           ${sizeKb} KB`);
+console.log(`  Alt titles attached:     ${totalAltTitles}`);
+console.log(`  Dropped (empty):         ${droppedEmpty}`);
+console.log(`  Output size:             ${sizeKb} KB`);
 console.log(`\nNext: copy ${outputPath} to convex/data/onet.json when you scaffold the project.`);

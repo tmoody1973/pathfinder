@@ -17,7 +17,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
-import { onetLookup, type ONetLookupResult } from "./onet";
+import { onetLookup, getTitleOverride, type ONetLookupResult } from "./onet";
 import onetData from "../data/onet.json";
 import { parseAgentJson } from "./parseJson";
 
@@ -47,20 +47,45 @@ and Digital Interface Designers (15-1255.00), NOT Software Developers (15-1252.0
 even though both work with computers. A "Frontend Developer" who writes code is
 Software Developers. A "Product Manager" is not either of those.
 
-Examples of correct mappings:
-  - "UX designer"           → 15-1255.00 Web and Digital Interface Designers (designs interaction, NOT writes code)
-  - "UI designer"           → 15-1255.00 Web and Digital Interface Designers
-  - "Product designer"      → 15-1255.00 Web and Digital Interface Designers
-  - "UX researcher"         → 19-3041.00 Sociologists (studies user behavior systematically) OR 15-1255.00
-  - "Frontend developer"    → 15-1254.00 Web Developers
-  - "Software engineer"     → 15-1252.00 Software Developers
-  - "Vibe coder"            → 15-1252.00 Software Developers (writes software, AI-assisted)
-  - "Graphic designer"      → 27-1024.00 Graphic Designers (visual identity, NOT digital interaction)
-  - "Product manager"       → 11-9111.00 Medical and Health Services Managers — NO, use 11-3021.00 Computer and Information Systems Managers if tech, else 11-2021.00 Marketing Managers
-  - "TikTok influencer"     → 27-3031.00 Public Relations Specialists (audience engagement, brand promotion)
-  - "Drone pilot"           → 53-2012.00 Commercial Pilots (operates an aircraft for hire)
-  - "VTuber"                → 27-2011.00 Actors (performs in character for an audience)
+Examples of correct mappings (memorize these — they cover the common traps):
+
+  Design roles (distinct from each other):
+  - "UX designer"            → 15-1255.00 Web and Digital Interface Designers (designs interaction, NOT writes code)
+  - "UI designer"            → 15-1255.00 Web and Digital Interface Designers
+  - "Product designer"       → 15-1255.00 Web and Digital Interface Designers (designs digital products)
+  - "UX researcher"          → 19-3041.00 Sociologists (studies user behavior systematically) OR 15-1255.00
+  - "Graphic designer"       → 27-1024.00 Graphic Designers (visual identity, logos, branding — NOT digital interaction)
+
+  Engineering roles:
+  - "Frontend developer"     → 15-1254.00 Web Developers
+  - "Backend developer"      → 15-1252.00 Software Developers
+  - "Software engineer"      → 15-1252.00 Software Developers
+  - "Full stack developer"   → 15-1252.00 Software Developers
+  - "Mobile developer"       → 15-1252.00 Software Developers
+  - "DevOps engineer"        → 15-1244.00 Network and Computer Systems Administrators OR 15-1252.00
+  - "Data engineer"          → 15-1243.00 Database Architects
+  - "Data scientist"         → 15-2051.00 Data Scientists
+  - "ML engineer" / "AI engineer" → 15-2051.00 Data Scientists OR 15-1252.00
+  - "Vibe coder"             → 15-1252.00 Software Developers (writes software, AI-assisted)
+
+  Management roles (the "Product Manager" trap):
+  - "Product manager" (tech default) → 11-3021.00 Computer and Information Systems Managers (oversees product development in a tech company — this is the MODERN default, NOT marketing)
+  - "Technical product manager"      → 11-3021.00 Computer and Information Systems Managers
+  - "Product marketing manager"      → 11-2021.00 Marketing Managers (note: "marketing" must appear in the title)
+  - "Program manager" (tech)         → 13-1082.00 Project Management Specialists
+  - "Project manager"                → 13-1082.00 Project Management Specialists
+  - "Engineering manager"            → 11-3021.00 Computer and Information Systems Managers
+  - "Marketing manager"              → 11-2021.00 Marketing Managers
+
+  Other careers:
+  - "TikTok influencer"      → 27-3031.00 Public Relations Specialists (audience engagement, brand promotion)
+  - "YouTuber" / "Content creator" → 27-3043.00 Writers and Authors OR 27-2012.00 Producers and Directors
+  - "Drone pilot"            → 53-2012.00 Commercial Pilots (operates an aircraft for hire)
+  - "VTuber"                 → 27-2011.00 Actors (performs in character for an audience)
+  - "Prompt engineer"        → 15-1252.00 Software Developers (writes software in natural language)
   - "Professional dog walker" → 39-2021.00 Animal Caretakers (cares for animals)
+
+CRITICAL for ambiguous titles: when the query is a title that could map to multiple occupations, DEFAULT to the TECH INDUSTRY meaning unless the query explicitly says otherwise. "Product manager" without qualifier = tech product manager = Computer and Information Systems Managers. "Manager" alone is rare — ask for context or pick based on surrounding signals.
 
 Return ONLY valid JSON with this exact shape:
   { "socCode": "15-1255.00", "reasoning": "one sentence explaining the functional match" }
@@ -91,13 +116,24 @@ export async function semanticOnetLookup(
 ): Promise<SemanticLookupResult | null> {
   if (!query || query.trim().length === 0) return null;
 
-  // Layer 1 + 2: try the static lookup first
+  // Layer 0: curated override — richest match with a hand-written reasoning string
+  const override = getTitleOverride(query);
+  if (override) {
+    return {
+      socCode: override.socCode,
+      title: override.title,
+      closestMatch: false,
+      reasoning: override.reasoning,
+      source: "exact",
+    };
+  }
+
+  // Layers 1-2: static lookup (O*NET primary titles + ~48k alternate titles)
   const staticResult = onetLookup(query);
   if (staticResult && !staticResult.closestMatch) {
-    // exact substring hit — high confidence, no need for LLM
     return {
       ...staticResult,
-      reasoning: `"${query}" matched the O*NET title directly.`,
+      reasoning: `"${query}" matched an O*NET title directly.`,
       source: "exact",
     };
   }

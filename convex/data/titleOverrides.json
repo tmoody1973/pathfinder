@@ -1,0 +1,257 @@
+{
+  "$schema": "Manual overrides for modern job titles that O*NET miscategorizes. Keyed by lowercased title string. The lookup chain checks this file FIRST, before O*NET's Alternate Titles and the LLM fallback. Add entries whenever a demo surfaces a bad O*NET mapping.",
+  "overrides": {
+    "product manager": {
+      "socCode": "11-3021.00",
+      "title": "Computer and Information Systems Managers",
+      "reasoning": "Modern tech product managers oversee digital product development — this matches Computer and Information Systems Managers. O*NET's default mapping to Marketing Managers is outdated.",
+      "confidence": "high"
+    },
+    "technical product manager": {
+      "socCode": "11-3021.00",
+      "title": "Computer and Information Systems Managers",
+      "reasoning": "Technical PM role spans engineering coordination and product strategy — fits Computer and Information Systems Managers.",
+      "confidence": "high"
+    },
+    "digital product manager": {
+      "socCode": "11-3021.00",
+      "title": "Computer and Information Systems Managers",
+      "reasoning": "Digital product management in tech — NOT marketing product management.",
+      "confidence": "high"
+    },
+    "product marketing manager": {
+      "socCode": "11-2021.00",
+      "title": "Marketing Managers",
+      "reasoning": "Explicitly marketing-focused — Marketing Managers is correct here.",
+      "confidence": "high"
+    },
+    "ux designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "UX designers design digital user experiences and interactions. They work with Figma, wireframes, and user research — a different field from Software Developers or Graphic Designers.",
+      "confidence": "high"
+    },
+    "user experience designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "Same as UX Designer.",
+      "confidence": "high"
+    },
+    "ui designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "UI design is the visual/interaction layer of digital products — Web and Digital Interface Designers.",
+      "confidence": "high"
+    },
+    "user interface designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "Same as UI Designer.",
+      "confidence": "high"
+    },
+    "product designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "Product designers in tech design digital products end-to-end — a subset of UX/UI.",
+      "confidence": "high"
+    },
+    "ux/ui designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "Combined UX/UI role — Web and Digital Interface Designers.",
+      "confidence": "high"
+    },
+    "ux researcher": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "UX research is part of the user-experience design function in most companies; closest O*NET fit.",
+      "confidence": "medium"
+    },
+    "interaction designer": {
+      "socCode": "15-1255.00",
+      "title": "Web and Digital Interface Designers",
+      "reasoning": "Interaction design is a subset of UX design in most modern tech companies.",
+      "confidence": "high"
+    },
+    "growth marketer": {
+      "socCode": "11-2021.00",
+      "title": "Marketing Managers",
+      "reasoning": "Growth marketing is a modern subset of marketing — Marketing Managers is correct.",
+      "confidence": "high"
+    },
+    "growth hacker": {
+      "socCode": "11-2021.00",
+      "title": "Marketing Managers",
+      "reasoning": "Growth hacker is marketing-engineering hybrid but primarily marketing. Marketing Managers captures it.",
+      "confidence": "medium"
+    },
+    "devops engineer": {
+      "socCode": "15-1244.00",
+      "title": "Network and Computer Systems Administrators",
+      "reasoning": "DevOps engineers manage deployment infrastructure — closest fit is Network and Computer Systems Administrators.",
+      "confidence": "medium"
+    },
+    "site reliability engineer": {
+      "socCode": "15-1244.00",
+      "title": "Network and Computer Systems Administrators",
+      "reasoning": "SRE is infrastructure reliability engineering — closest fit is Network and Computer Systems Administrators.",
+      "confidence": "medium"
+    },
+    "sre": {
+      "socCode": "15-1244.00",
+      "title": "Network and Computer Systems Administrators",
+      "reasoning": "Same as Site Reliability Engineer.",
+      "confidence": "medium"
+    },
+    "data engineer": {
+      "socCode": "15-1243.00",
+      "title": "Database Architects",
+      "reasoning": "Data engineers design and build data pipelines — Database Architects is the closest O*NET match.",
+      "confidence": "high"
+    },
+    "ml engineer": {
+      "socCode": "15-2051.00",
+      "title": "Data Scientists",
+      "reasoning": "ML engineers work on machine learning systems. Data Scientists is the closest O*NET classification.",
+      "confidence": "high"
+    },
+    "machine learning engineer": {
+      "socCode": "15-2051.00",
+      "title": "Data Scientists",
+      "reasoning": "Same as ML Engineer.",
+      "confidence": "high"
+    },
+    "ai engineer": {
+      "socCode": "15-2051.00",
+      "title": "Data Scientists",
+      "reasoning": "AI/ML work classifies under Data Scientists in O*NET.",
+      "confidence": "medium"
+    },
+    "prompt engineer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Prompt engineering is a modern software role — writing software in natural language. Closest O*NET fit is Software Developers.",
+      "confidence": "medium"
+    },
+    "frontend developer": {
+      "socCode": "15-1254.00",
+      "title": "Web Developers",
+      "reasoning": "Frontend developers build web UIs — Web Developers.",
+      "confidence": "high"
+    },
+    "front-end developer": {
+      "socCode": "15-1254.00",
+      "title": "Web Developers",
+      "reasoning": "Same as frontend developer.",
+      "confidence": "high"
+    },
+    "backend developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Backend software engineering — Software Developers.",
+      "confidence": "high"
+    },
+    "back-end developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Same as backend developer.",
+      "confidence": "high"
+    },
+    "full stack developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Full-stack developers build both frontend and backend — Software Developers captures both.",
+      "confidence": "high"
+    },
+    "full-stack developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Same as full stack developer.",
+      "confidence": "high"
+    },
+    "mobile developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Mobile app development — Software Developers.",
+      "confidence": "high"
+    },
+    "ios developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "iOS app development — Software Developers.",
+      "confidence": "high"
+    },
+    "android developer": {
+      "socCode": "15-1252.00",
+      "title": "Software Developers",
+      "reasoning": "Android app development — Software Developers.",
+      "confidence": "high"
+    },
+    "cloud engineer": {
+      "socCode": "15-1244.00",
+      "title": "Network and Computer Systems Administrators",
+      "reasoning": "Cloud infrastructure work — Network and Computer Systems Administrators.",
+      "confidence": "medium"
+    },
+    "solutions architect": {
+      "socCode": "15-1299.08",
+      "title": "Computer Systems Engineers/Architects",
+      "reasoning": "Solutions architects design systems — Computer Systems Engineers/Architects.",
+      "confidence": "high"
+    },
+    "scrum master": {
+      "socCode": "13-1082.00",
+      "title": "Project Management Specialists",
+      "reasoning": "Scrum masters facilitate agile delivery — Project Management Specialists.",
+      "confidence": "high"
+    },
+    "engineering manager": {
+      "socCode": "11-3021.00",
+      "title": "Computer and Information Systems Managers",
+      "reasoning": "Engineering managers oversee technical teams — Computer and Information Systems Managers.",
+      "confidence": "high"
+    },
+    "cto": {
+      "socCode": "11-3021.00",
+      "title": "Computer and Information Systems Managers",
+      "reasoning": "CTO is the senior technology leader — Computer and Information Systems Managers.",
+      "confidence": "high"
+    },
+    "content creator": {
+      "socCode": "27-3043.00",
+      "title": "Writers and Authors",
+      "reasoning": "Content creators produce written/video content — closest O*NET fit is Writers and Authors.",
+      "confidence": "medium"
+    },
+    "youtuber": {
+      "socCode": "27-2012.00",
+      "title": "Producers and Directors",
+      "reasoning": "YouTubers produce and direct video content — Producers and Directors.",
+      "confidence": "medium"
+    },
+    "tiktok influencer": {
+      "socCode": "27-3031.00",
+      "title": "Public Relations Specialists",
+      "reasoning": "Influencers do audience engagement and brand promotion — Public Relations Specialists.",
+      "confidence": "medium"
+    },
+    "vtuber": {
+      "socCode": "27-2011.00",
+      "title": "Actors",
+      "reasoning": "VTubers perform in character for an audience — Actors.",
+      "confidence": "medium"
+    },
+    "podcaster": {
+      "socCode": "27-2012.00",
+      "title": "Producers and Directors",
+      "reasoning": "Podcasters produce audio content — Producers and Directors.",
+      "confidence": "high"
+    },
+    "radio host": {
+      "socCode": "27-3011.00",
+      "title": "Broadcast Announcers and Radio Disc Jockeys",
+      "reasoning": "Direct O*NET match.",
+      "confidence": "high"
+    }
+  }
+}
