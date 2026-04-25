@@ -24,6 +24,7 @@ export const createPath = mutation({
     targetCareer: v.string(),
     hoursPerWeek: v.optional(v.number()),
     city: v.optional(v.string()),
+    profileText: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"paths">> => {
     const currentTrim = args.currentCareer.trim();
@@ -69,6 +70,14 @@ export const createPath = mutation({
     const cityTrim = args.city?.trim();
     const city = cityTrim && cityTrim.length > 0 ? cityTrim : undefined;
 
+    // Cap profile text at 8000 chars to keep prompts bounded. Most LinkedIn
+    // About + Experience sections fit comfortably under that.
+    const profileTrim = args.profileText?.trim();
+    const profileText =
+      profileTrim && profileTrim.length > 0
+        ? profileTrim.slice(0, 8000)
+        : undefined;
+
     const now = Date.now();
     const pathId = await ctx.db.insert("paths", {
       sessionId: session._id,
@@ -79,6 +88,7 @@ export const createPath = mutation({
       status: "pending",
       hoursPerWeek,
       city,
+      profileText,
       createdAt: now,
     });
 

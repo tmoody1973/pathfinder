@@ -29,6 +29,7 @@ export default defineSchema({
     targetReasoning: v.optional(v.string()),
     hoursPerWeek: v.optional(v.number()),  // user-stated time availability — re-paces the path
     city: v.optional(v.string()),  // user's city/metro for location-specific salary lookup
+    profileText: v.optional(v.string()),  // pasted LinkedIn About+Experience or resume — personalizes the bridge
     status: v.union(
       v.literal("pending"),
       v.literal("diffing"),

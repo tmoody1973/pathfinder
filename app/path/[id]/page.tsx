@@ -140,6 +140,11 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
               <Text as="h1" className="text-3xl md:text-4xl mt-3">
                 {featured?.title ?? skillDiffOutput?.headline?.moduleTopic ?? "Generating your bridge..."}
               </Text>
+              {path.profileText && (
+                <Badge size="sm" variant="solid" className="mt-3">
+                  Personalized to your profile
+                </Badge>
+              )}
               <div className="mt-3 flex flex-wrap gap-2">
                 {featured && (
                   <Badge size="sm" variant="default">

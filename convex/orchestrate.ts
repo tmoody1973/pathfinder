@@ -105,7 +105,12 @@ export const run = internalAction({
       await ctx.runMutation(internal.agentRuns.markRunning, { runId: skillDiffRunId });
 
       skillDiff = await withTimeout(
-        runPureSkillDiff(anthropic, path.currentCareer, path.targetCareer),
+        runPureSkillDiff(
+          anthropic,
+          path.currentCareer,
+          path.targetCareer,
+          path.profileText,
+        ),
         SKILL_DIFF_TIMEOUT_MS,
         "skillDiff",
       );

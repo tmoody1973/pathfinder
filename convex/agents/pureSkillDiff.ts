@@ -220,11 +220,30 @@ export async function runPureSkillDiff(
   anthropic: Anthropic,
   currentCareerInput: string,
   targetCareerInput: string,
+  profileText?: string,
 ): Promise<SkillDiffResult> {
+  const profileBlock = profileText
+    ? `
+
+LEARNER'S ACTUAL PROFILE (pasted from their LinkedIn or resume):
+"""
+${profileText}
+"""
+
+PERSONALIZATION RULES (apply when profile is present):
+1. Read the profile carefully. Identify SPECIFIC skills, tools, accomplishments, and years of experience the learner ACTUALLY HAS.
+2. In the CURRENT career profile, BOOST any competency the learner has demonstrated experience with — set higher importance and level scores reflecting their real-world depth, not the role's typical baseline. Cite specific evidence inline by quoting their experience (e.g. "9 years contract review = strong document synthesis").
+3. In the DIFF, MOVE any "gained" competency the profile shows they already have INTO sharedKnowledge or sharedSkills. Don't make them learn what they already know.
+4. In the FRAMING, NAME their specific experience back to them. Quote 1-2 concrete details from their profile. Example: "Nine years of paralegal work at Latham & Watkins doing depositions and contract review IS structured user-research interviewing — you've been doing it without the UX vocabulary."
+5. The bridge is now whatever they GENUINELY don't have yet, after subtracting their real experience.
+
+Honesty over flattery: if their profile shows they're FURTHER from the target than a generic learner (e.g. 20 years in a totally unrelated field), say so. If they're CLOSER, name the gap that closes.`
+    : "";
+
   const prompt = `Analyze the career bridge for a learner pivoting:
 
 CURRENT career: ${currentCareerInput}
-TARGET career:  ${targetCareerInput}
+TARGET career:  ${targetCareerInput}${profileBlock}
 
 Produce the full structured analysis per the system prompt. Return only JSON.`;
 

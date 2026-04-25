@@ -19,6 +19,8 @@ export default function Home() {
   const [targetCareer, setTargetCareer] = useState("");
   const [hoursPerWeek, setHoursPerWeek] = useState("5");
   const [city, setCity] = useState("");
+  const [profileText, setProfileText] = useState("");
+  const [profileExpanded, setProfileExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +32,14 @@ export default function Home() {
       const anonymousId = getAnonymousId();
       const hours = parseInt(hoursPerWeek, 10);
       const cityTrim = city.trim();
+      const profileTrim = profileText.trim();
       const pathId = await createPath({
         anonymousId,
         currentCareer: currentCareer.trim(),
         targetCareer: targetCareer.trim(),
         hoursPerWeek: Number.isFinite(hours) && hours > 0 ? hours : undefined,
         city: cityTrim.length > 0 ? cityTrim : undefined,
+        profileText: profileTrim.length > 0 ? profileTrim : undefined,
       });
       router.push(`/path/${pathId}`);
     } catch (err) {
@@ -131,6 +135,52 @@ export default function Home() {
                   Salary data gets local. Skip for national medians.
                 </Text>
               </div>
+            </div>
+
+            {/* Profile / résumé paste — collapsible to keep the form short */}
+            <div>
+              {!profileExpanded ? (
+                <button
+                  type="button"
+                  onClick={() => setProfileExpanded(true)}
+                  className="text-sm text-foreground/70 hover:text-foreground underline underline-offset-2 decoration-2"
+                  disabled={submitting}
+                >
+                  + Personalize this with my LinkedIn or résumé (optional)
+                </button>
+              ) : (
+                <div>
+                  <Label htmlFor="profile">
+                    Paste your LinkedIn About + Experience (or résumé)
+                  </Label>
+                  <textarea
+                    id="profile"
+                    value={profileText}
+                    onChange={(e) => setProfileText(e.target.value)}
+                    placeholder="Paste here. We'll subtract what you already have so the path shows YOUR real gap, not a generic one."
+                    disabled={submitting}
+                    rows={6}
+                    className="mt-1.5 block w-full rounded border-2 border-black bg-card p-3 text-sm font-sans focus:outline-none focus:ring-0 focus:bg-card resize-y"
+                    maxLength={8000}
+                  />
+                  <div className="mt-1 flex items-center justify-between gap-2 flex-wrap">
+                    <Text as="p" className="text-xs text-muted-foreground">
+                      Stays in your session. Not stored beyond this path. {profileText.length}/8000
+                    </Text>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileExpanded(false);
+                        setProfileText("");
+                      }}
+                      className="text-xs text-muted-foreground hover:text-foreground underline"
+                      disabled={submitting}
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {error && (
