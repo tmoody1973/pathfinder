@@ -101,8 +101,27 @@ Return only JSON.`;
     "Assessment Agent",
   );
 
+  // Defensive: when Haiku's structured JSON shape is off (output truncated,
+  // wrapped, flat, or missing a field), don't throw and break the whole
+  // bridge build. Coerce to safe defaults so the rest of the path renders.
+  // Log the bad shape for diagnostics.
   if (!Array.isArray(parsed.quiz) || typeof parsed.project !== "object" || parsed.project === null) {
-    throw new Error("Assessment Agent: malformed JSON shape");
+    console.warn(
+      "[assessment] malformed JSON shape, returning empty stub. Bad output:",
+      text.slice(0, 500),
+    );
+    return {
+      quiz: [],
+      project: {
+        title: "Project brief unavailable",
+        brief:
+          "The assessment agent returned malformed output. The other module sections still render correctly.",
+        deliverables: [],
+        skillsDemonstrated: [],
+        estimatedHours: 0,
+        isPortfolioArtifact: false,
+      },
+    };
   }
 
   const project = parsed.project;
