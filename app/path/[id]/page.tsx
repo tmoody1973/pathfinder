@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -31,6 +31,7 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
 
   const path = useQuery(api.paths.get, { pathId });
   const agentRuns = useQuery(api.agentRuns.listForPath, { pathId });
+  const moduleDoc = useQuery(api.modules.getForPath, { pathId });
 
   if (path === undefined || agentRuns === undefined) {
     return (
@@ -279,7 +280,223 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
             </Card.Content>
           </Card>
         )}
+
+        {/* The assembled bridge module — rendered once aggregation is done */}
+        {moduleDoc && <ModuleContent moduleDoc={moduleDoc} />}
       </div>
     </main>
+  );
+}
+
+/* === Bridge module content sections === */
+
+function ModuleContent({ moduleDoc }: { moduleDoc: any }) {
+  return (
+    <div className="mt-12 space-y-10">
+      <Text as="h2" className="text-3xl">
+        The Bridge Module
+      </Text>
+
+      {moduleDoc.lesson && <LessonSection lesson={moduleDoc.lesson} />}
+      {moduleDoc.videos && moduleDoc.videos.length > 0 && (
+        <ResourceSection videos={moduleDoc.videos} />
+      )}
+      {moduleDoc.quiz && moduleDoc.quiz.length > 0 && (
+        <QuizSection quiz={moduleDoc.quiz} />
+      )}
+      {moduleDoc.project && <ProjectSection project={moduleDoc.project} />}
+    </div>
+  );
+}
+
+function LessonSection({ lesson }: { lesson: any }) {
+  return (
+    <Card className="block w-full">
+      <Card.Header>
+        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
+          Lesson · 10 min read
+        </Text>
+        {lesson.intro && (
+          <Text as="p" className="mt-3 text-lg leading-relaxed">
+            {lesson.intro}
+          </Text>
+        )}
+      </Card.Header>
+      <Card.Content>
+        <div className="space-y-6">
+          {(lesson.sections ?? []).map((section: any, i: number) => (
+            <article key={i}>
+              <Text as="h4" className="text-xl">
+                {section.heading}
+              </Text>
+              <Text as="p" className="mt-2 leading-relaxed whitespace-pre-line">
+                {section.body}
+              </Text>
+              {section.tryThis && (
+                <div className="mt-3 rounded border-2 border-black bg-accent p-3 text-sm">
+                  <span className="font-head text-xs uppercase tracking-widest mr-2">
+                    Try this →
+                  </span>
+                  {section.tryThis}
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function ResourceSection({ videos }: { videos: any[] }) {
+  return (
+    <div>
+      <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
+        Curated videos · {videos.length}
+      </Text>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {videos.map((v) => (
+          <a
+            key={v.videoId}
+            href={v.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block group"
+          >
+            <Card className="block w-full transition-all group-hover:shadow-none">
+              <div className="flex gap-3 p-3">
+                {v.thumbnailUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={v.thumbnailUrl}
+                    alt=""
+                    className="w-32 h-20 object-cover rounded border-2 border-black flex-shrink-0"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <Text as="p" className="font-head text-sm leading-snug line-clamp-2">
+                    {v.title}
+                  </Text>
+                  <Text as="p" className="mt-1 text-xs text-muted-foreground">
+                    {v.channelTitle} · {v.duration}
+                  </Text>
+                  <Badge size="sm" variant="outline" className="mt-2">
+                    {v.relevanceScore}/100
+                  </Badge>
+                </div>
+              </div>
+            </Card>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function QuizSection({ quiz }: { quiz: any[] }) {
+  return (
+    <Card className="block w-full">
+      <Card.Header>
+        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
+          Practice quiz · {quiz.length} scenarios
+        </Text>
+      </Card.Header>
+      <Card.Content>
+        <div className="space-y-6">
+          {quiz.map((q: any, i: number) => (
+            <QuizQuestion key={i} q={q} index={i} />
+          ))}
+        </div>
+      </Card.Content>
+    </Card>
+  );
+}
+
+function QuizQuestion({ q, index }: { q: any; index: number }) {
+  const [selected, setSelected] = useState<number | null>(null);
+  const showResult = selected !== null;
+  return (
+    <div>
+      <Text as="p" className="font-head">
+        {index + 1}. {q.q}
+      </Text>
+      <div className="mt-3 space-y-2">
+        {(q.options ?? []).map((opt: string, j: number) => {
+          const isCorrect = j === q.correct;
+          const isSelected = selected === j;
+          let style = "border-2 border-black bg-card hover:bg-accent";
+          if (showResult && isCorrect) style = "border-2 border-emerald-500 bg-emerald-50";
+          else if (showResult && isSelected && !isCorrect)
+            style = "border-2 border-destructive bg-red-50";
+          return (
+            <button
+              key={j}
+              type="button"
+              onClick={() => !showResult && setSelected(j)}
+              disabled={showResult}
+              className={`block w-full text-left rounded p-3 transition-colors ${style}`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+      {showResult && q.explanation && (
+        <div className="mt-3 rounded border-2 border-black bg-accent p-3 text-sm">
+          <span className="font-head text-xs uppercase tracking-widest mr-2">Why →</span>
+          {q.explanation}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectSection({ project }: { project: any }) {
+  return (
+    <Card className="block w-full">
+      <Card.Header>
+        <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
+          Capstone project · {project.estimatedHours}h · portfolio artifact
+        </Text>
+        <Text as="h3" className="text-2xl mt-2">
+          {project.title}
+        </Text>
+        {project.brief && (
+          <Text as="p" className="mt-3 leading-relaxed">
+            {project.brief}
+          </Text>
+        )}
+      </Card.Header>
+      <Card.Content>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {project.deliverables && project.deliverables.length > 0 && (
+            <div>
+              <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
+                Deliverables
+              </Text>
+              <ul className="mt-2 list-disc list-inside space-y-1 text-sm">
+                {project.deliverables.map((d: string, i: number) => (
+                  <li key={i}>{d}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {project.skillsDemonstrated && project.skillsDemonstrated.length > 0 && (
+            <div>
+              <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground">
+                Skills demonstrated
+              </Text>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {project.skillsDemonstrated.map((s: string, i: number) => (
+                  <Badge key={i} size="sm" variant="default">
+                    {s}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Card.Content>
+    </Card>
   );
 }
