@@ -18,6 +18,7 @@ export default function Home() {
   const [currentCareer, setCurrentCareer] = useState("");
   const [targetCareer, setTargetCareer] = useState("");
   const [hoursPerWeek, setHoursPerWeek] = useState("5");
+  const [city, setCity] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,11 +29,13 @@ export default function Home() {
     try {
       const anonymousId = getAnonymousId();
       const hours = parseInt(hoursPerWeek, 10);
+      const cityTrim = city.trim();
       const pathId = await createPath({
         anonymousId,
         currentCareer: currentCareer.trim(),
         targetCareer: targetCareer.trim(),
         hoursPerWeek: Number.isFinite(hours) && hours > 0 ? hours : undefined,
+        city: cityTrim.length > 0 ? cityTrim : undefined,
       });
       router.push(`/path/${pathId}`);
     } catch (err) {
@@ -93,24 +96,39 @@ export default function Home() {
               />
             </div>
 
-            <div>
-              <Label htmlFor="hours">
-                Hours per week you can dedicate
-              </Label>
-              <div className="mt-1.5 flex items-center gap-3">
-                <Input
-                  id="hours"
-                  type="number"
-                  min="1"
-                  max="40"
-                  step="1"
-                  value={hoursPerWeek}
-                  onChange={(e) => setHoursPerWeek(e.target.value)}
-                  disabled={submitting}
-                  className="w-24"
-                />
-                <Text as="p" className="text-sm text-muted-foreground">
-                  We&apos;ll re-pace the path. 5h/week ≠ 12h/week.
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="hours">Hours per week you can dedicate</Label>
+                <div className="mt-1.5">
+                  <Input
+                    id="hours"
+                    type="number"
+                    min="1"
+                    max="40"
+                    step="1"
+                    value={hoursPerWeek}
+                    onChange={(e) => setHoursPerWeek(e.target.value)}
+                    disabled={submitting}
+                  />
+                </div>
+                <Text as="p" className="text-xs text-muted-foreground mt-1">
+                  We re-pace the path. 5h/week ≠ 12h/week.
+                </Text>
+              </div>
+              <div>
+                <Label htmlFor="city">Your city or metro (optional)</Label>
+                <div className="mt-1.5">
+                  <Input
+                    id="city"
+                    type="text"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="e.g. Chicago, IL"
+                    disabled={submitting}
+                  />
+                </div>
+                <Text as="p" className="text-xs text-muted-foreground mt-1">
+                  Salary data gets local. Skip for national medians.
                 </Text>
               </div>
             </div>

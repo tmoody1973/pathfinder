@@ -18,6 +18,7 @@ const agentLiteral = v.union(
   v.literal("community"),
   v.literal("books"),
   v.literal("news"),
+  v.literal("salary"),
 );
 
 const statusLiteral = v.union(

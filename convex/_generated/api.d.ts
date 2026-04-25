@@ -17,6 +17,7 @@ import type * as agents_lesson from "../agents/lesson.js";
 import type * as agents_news from "../agents/news.js";
 import type * as agents_pureSkillDiff from "../agents/pureSkillDiff.js";
 import type * as agents_resource from "../agents/resource.js";
+import type * as agents_salary from "../agents/salary.js";
 import type * as agents_skillDiff from "../agents/skillDiff.js";
 import type * as lib_googleBooks from "../lib/googleBooks.js";
 import type * as lib_onet from "../lib/onet.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   "agents/news": typeof agents_news;
   "agents/pureSkillDiff": typeof agents_pureSkillDiff;
   "agents/resource": typeof agents_resource;
+  "agents/salary": typeof agents_salary;
   "agents/skillDiff": typeof agents_skillDiff;
   "lib/googleBooks": typeof lib_googleBooks;
   "lib/onet": typeof lib_onet;

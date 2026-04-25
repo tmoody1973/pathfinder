@@ -28,6 +28,7 @@ export default defineSchema({
     targetONET: v.string(),
     targetReasoning: v.optional(v.string()),
     hoursPerWeek: v.optional(v.number()),  // user-stated time availability — re-paces the path
+    city: v.optional(v.string()),  // user's city/metro for location-specific salary lookup
     status: v.union(
       v.literal("pending"),
       v.literal("diffing"),
@@ -54,6 +55,7 @@ export default defineSchema({
       v.literal("community"),
       v.literal("books"),
       v.literal("news"),
+      v.literal("salary"),
     ),
     status: v.union(
       v.literal("pending"),
@@ -83,6 +85,7 @@ export default defineSchema({
     community: v.optional(v.any()),
     books: v.optional(v.any()),
     news: v.optional(v.any()),
+    salary: v.optional(v.any()),
     cached: v.boolean(),
     createdAt: v.number(),
   })

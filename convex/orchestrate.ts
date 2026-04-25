@@ -17,6 +17,7 @@ import { runCourseAgent } from "./agents/course";
 import { runCommunityAgent } from "./agents/community";
 import { runBooksAgent } from "./agents/books";
 import { runNewsAgent } from "./agents/news";
+import { runSalaryAgent } from "./agents/salary";
 import type { Id } from "./_generated/dataModel";
 
 /**
@@ -87,12 +88,17 @@ export const run = internalAction({
       pathId,
       agent: "news",
     });
+    const salaryRunId = await ctx.runMutation(internal.agentRuns.insertPending, {
+      pathId,
+      agent: "salary",
+    });
+
+    const path = await ctx.runQuery(internal.paths.getInternal, { pathId });
+    if (!path) throw new Error(`Path ${pathId} not found`);
 
     let skillDiff: SkillDiffResult;
 
     try {
-      const path = await ctx.runQuery(internal.paths.getInternal, { pathId });
-      if (!path) throw new Error(`Path ${pathId} not found`);
 
       // === Phase 1: Skill Diff Agent (sequential, gates the rest) ===
       await ctx.runMutation(internal.paths.setStatus, { pathId, status: "diffing" });
@@ -128,7 +134,7 @@ export const run = internalAction({
       }).catch(() => {});
 
       // skillDiff is the gate. Mark all downstream agents as skipped, fail the path.
-      for (const id of [lessonRunId, resourceRunId, assessmentRunId, courseRunId, communityRunId, booksRunId, newsRunId]) {
+      for (const id of [lessonRunId, resourceRunId, assessmentRunId, courseRunId, communityRunId, booksRunId, newsRunId, salaryRunId]) {
         await ctx.runMutation(internal.agentRuns.markError, {
           runId: id,
           errorMessage: "Skipped — skill-diff gate failed",
@@ -186,6 +192,21 @@ export const run = internalAction({
       "news",
       () => withTimeout(runNewsAgent(anthropic, skillDiff), AGENT_TIMEOUT_MS, "news"),
     );
+    const salaryPromise = runAgentSettled(
+      ctx,
+      salaryRunId,
+      "salary",
+      () =>
+        withTimeout(
+          runSalaryAgent({
+            currentCareer: path.currentCareer,
+            targetCareer: path.targetCareer,
+            city: path.city ?? undefined,
+          }),
+          AGENT_TIMEOUT_MS,
+          "salary",
+        ),
+    );
 
     const [
       lessonResult,
@@ -195,6 +216,7 @@ export const run = internalAction({
       communityResult,
       booksResult,
       newsResult,
+      salaryResult,
     ] = await Promise.all([
       lessonPromise,
       resourcePromise,
@@ -203,6 +225,7 @@ export const run = internalAction({
       communityPromise,
       booksPromise,
       newsPromise,
+      salaryPromise,
     ]);
 
     // === Phase 3: Aggregate into modules row ===
@@ -228,6 +251,7 @@ export const run = internalAction({
         community: communityResult ?? undefined,
         books: booksResult ?? undefined,
         news: newsResult ?? undefined,
+        salary: salaryResult ?? undefined,
         cached: false,
       });
     } catch (err) {

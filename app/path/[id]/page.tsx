@@ -178,15 +178,25 @@ export default function PathPage({ params }: { params: Promise<{ id: string }> }
           </div>
         )}
 
-        {/* Salary + outlook panel — answers "is this worth it?" with real numbers */}
-        {skillDiffOutput && (skillDiffOutput.currentSalary || skillDiffOutput.targetSalary) && (
-          <SalaryPanel
-            currentTitle={path.currentCareer}
-            targetTitle={path.targetCareer}
-            current={skillDiffOutput.currentSalary}
-            target={skillDiffOutput.targetSalary}
-          />
-        )}
+        {/* Salary + outlook panel — Sonar (city-specific, cited) preferred,
+            Opus baseline as fallback */}
+        {(() => {
+          const sonarSalary = moduleDoc?.salary;
+          const opusCurrent = skillDiffOutput?.currentSalary;
+          const opusTarget = skillDiffOutput?.targetSalary;
+          const hasAnything = sonarSalary || opusCurrent || opusTarget;
+          if (!hasAnything) return null;
+          return (
+            <SalaryPanel
+              currentTitle={path.currentCareer}
+              targetTitle={path.targetCareer}
+              city={path.city}
+              sonarSalary={sonarSalary}
+              opusCurrent={opusCurrent}
+              opusTarget={opusTarget}
+            />
+          );
+        })()}
 
         {/* Full path outline — all 4 phases × 10-12 modules. Click any module
             to generate it on-demand. Generated modules switch the content
@@ -243,14 +253,41 @@ function formatSalary(n?: number): string {
 function SalaryPanel({
   currentTitle,
   targetTitle,
-  current,
-  target,
+  city,
+  sonarSalary,
+  opusCurrent,
+  opusTarget,
 }: {
   currentTitle: string;
   targetTitle: string;
-  current?: any;
-  target?: any;
+  city?: string;
+  sonarSalary?: any;
+  opusCurrent?: any;
+  opusTarget?: any;
 }) {
+  // Prefer Sonar (current, cited, city-specific) over Opus baseline
+  const sonarHasData = sonarSalary?.current?.medianAnnual && sonarSalary?.target?.medianAnnual;
+  const usingSonar = Boolean(sonarHasData);
+
+  const current = usingSonar
+    ? {
+        medianSalary: sonarSalary.current.medianAnnual,
+        salaryRange: sonarSalary.current.range,
+        outlookGrowth: sonarSalary.current.outlookGrowth,
+        entryEducation: sonarSalary.current.entryEducation,
+        blsProxyNote: sonarSalary.current.blsProxyNote,
+      }
+    : opusCurrent;
+  const target = usingSonar
+    ? {
+        medianSalary: sonarSalary.target.medianAnnual,
+        salaryRange: sonarSalary.target.range,
+        outlookGrowth: sonarSalary.target.outlookGrowth,
+        entryEducation: sonarSalary.target.entryEducation,
+        blsProxyNote: sonarSalary.target.blsProxyNote,
+      }
+    : opusTarget;
+
   const lift =
     typeof current?.medianSalary === "number" &&
     typeof target?.medianSalary === "number"
@@ -266,9 +303,16 @@ function SalaryPanel({
       <div className="flex items-baseline justify-between flex-wrap gap-2 mb-3">
         <Text as="p" className="text-xs uppercase tracking-widest font-head">
           Salary + outlook
+          {usingSonar && city && (
+            <span className="ml-2 normal-case text-muted-foreground tracking-normal">
+              · {city}
+            </span>
+          )}
         </Text>
         <Text as="p" className="text-xs text-muted-foreground">
-          National median (US) · BLS-aligned
+          {usingSonar
+            ? "Live web data · Perplexity Sonar with citations"
+            : "National median (US) · Opus baseline"}
         </Text>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -349,10 +393,60 @@ function SalaryPanel({
           )}
         </div>
       </div>
-      <Text as="p" className="text-xs text-muted-foreground mt-2">
-        Numbers are national US medians from Claude&apos;s training-time BLS knowledge —
-        location-specific data via Perplexity Sonar coming next.
-      </Text>
+      {/* BLS proxy note (when target career maps to a proxy SOC like
+          Project Management Specialists for Product Manager) */}
+      {usingSonar && (current?.blsProxyNote || target?.blsProxyNote) && (
+        <div className="mt-3 text-xs text-foreground/70 leading-snug border-2 border-dashed border-black/20 rounded p-2 bg-muted/30">
+          {current?.blsProxyNote && current.blsProxyNote !== "Direct BLS match" && (
+            <div>
+              <span className="font-head">{currentTitle}:</span> {current.blsProxyNote}
+            </div>
+          )}
+          {target?.blsProxyNote && target.blsProxyNote !== "Direct BLS match" && (
+            <div>
+              <span className="font-head">{targetTitle}:</span> {target.blsProxyNote}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Sonar source citations — clickable list of all data sources used */}
+      {usingSonar && Array.isArray(sonarSalary?.citations) && sonarSalary.citations.length > 0 && (
+        <div className="mt-3">
+          <Text as="p" className="text-xs uppercase tracking-widest text-muted-foreground mb-1.5">
+            Sources ({sonarSalary.citations.length})
+          </Text>
+          <div className="flex flex-wrap gap-1.5">
+            {sonarSalary.citations.slice(0, 8).map((url: string, i: number) => {
+              let host = url;
+              try {
+                host = new URL(url).hostname.replace(/^www\./, "");
+              } catch {
+                /* keep raw */
+              }
+              return (
+                <a
+                  key={i}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs border-2 border-black bg-card hover:bg-accent rounded px-2 py-0.5 transition-colors"
+                >
+                  {host}
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {!usingSonar && (
+        <Text as="p" className="text-xs text-muted-foreground mt-2">
+          Numbers are national US medians from Claude&apos;s training-time BLS knowledge.
+          Add a city on the home form to upgrade to live Sonar data with real
+          citations.
+        </Text>
+      )}
     </div>
   );
 }

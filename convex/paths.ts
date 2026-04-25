@@ -23,6 +23,7 @@ export const createPath = mutation({
     currentCareer: v.string(),
     targetCareer: v.string(),
     hoursPerWeek: v.optional(v.number()),
+    city: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<Id<"paths">> => {
     const currentTrim = args.currentCareer.trim();
@@ -65,6 +66,9 @@ export const createPath = mutation({
         ? Math.max(1, Math.min(40, Math.round(args.hoursPerWeek)))
         : undefined;
 
+    const cityTrim = args.city?.trim();
+    const city = cityTrim && cityTrim.length > 0 ? cityTrim : undefined;
+
     const now = Date.now();
     const pathId = await ctx.db.insert("paths", {
       sessionId: session._id,
@@ -74,6 +78,7 @@ export const createPath = mutation({
       targetONET: "",
       status: "pending",
       hoursPerWeek,
+      city,
       createdAt: now,
     });
 
