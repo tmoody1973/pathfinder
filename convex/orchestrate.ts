@@ -4,7 +4,8 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import Anthropic from "@anthropic-ai/sdk";
-import { runSkillDiffAgent, type SkillDiffResult } from "./agents/skillDiff";
+import type { SkillDiffResult } from "./agents/skillDiff";
+import { runPureSkillDiff } from "./agents/pureSkillDiff";
 import { runLessonAgent } from "./agents/lesson";
 import { runResourceAgent } from "./agents/resource";
 import { runAssessmentAgent } from "./agents/assessment";
@@ -84,7 +85,7 @@ export const run = internalAction({
       await ctx.runMutation(internal.agentRuns.markRunning, { runId: skillDiffRunId });
 
       skillDiff = await withTimeout(
-        runSkillDiffAgent(anthropic, path.currentCareer, path.targetCareer),
+        runPureSkillDiff(anthropic, path.currentCareer, path.targetCareer),
         AGENT_TIMEOUT_MS,
         "skillDiff",
       );

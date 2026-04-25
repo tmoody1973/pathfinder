@@ -14,6 +14,7 @@ import type * as agents_books from "../agents/books.js";
 import type * as agents_community from "../agents/community.js";
 import type * as agents_course from "../agents/course.js";
 import type * as agents_lesson from "../agents/lesson.js";
+import type * as agents_pureSkillDiff from "../agents/pureSkillDiff.js";
 import type * as agents_resource from "../agents/resource.js";
 import type * as agents_skillDiff from "../agents/skillDiff.js";
 import type * as lib_googleBooks from "../lib/googleBooks.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "agents/community": typeof agents_community;
   "agents/course": typeof agents_course;
   "agents/lesson": typeof agents_lesson;
+  "agents/pureSkillDiff": typeof agents_pureSkillDiff;
   "agents/resource": typeof agents_resource;
   "agents/skillDiff": typeof agents_skillDiff;
   "lib/googleBooks": typeof lib_googleBooks;
