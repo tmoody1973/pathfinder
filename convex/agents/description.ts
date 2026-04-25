@@ -85,39 +85,39 @@ NON-NEGOTIABLE QUALITY RULES:
 5. TRADE-OFFS MUST BE HONEST. Career-change content is full of glossy "you'll love it!" cons that read as marketing. Real cons are: politics in PM, on-call rotations in DevOps, client-pleasing in agency design, plateau pay for senior ICs vs managers. Name them.
 6. ENTRY PATHWAYS USE PROPORTIONS YOU CAN DEFEND. "About a third of new PMs come from product marketing or analyst roles." If you don't know, say "common" / "rare" / "increasingly common", not made-up percentages.
 
-LENGTH BUDGET (strict): the entire JSON output must be under 1500 tokens. Stay tight. Trim purpose strings to 8 words. Trim "whatChanges" rung descriptions to one short sentence. Cap section sizes at the lower end of the ranges below. Skipping a section is better than padding it.
+LENGTH BUDGET (NON-NEGOTIABLE): output must fit within 800 tokens. Be terse. Single short sentence per item where the schema allows. Skip optional fields if they would push you over budget. The user reads this AT A GLANCE.
 
 OUTPUT FORMAT — return ONLY a JSON object, no prose, no markdown:
 {
-  "oneLineDefinition": "<ONE sentence; what this role IS in plain English>",
+  "oneLineDefinition": "<ONE short sentence; what this role IS>",
   "dayInTheLife": {
-    "morning": "<2-3 sentences max; concrete tools named, actual cadence>",
-    "afternoon": "<2-3 sentences max; what shifts, what meetings>",
-    "eveningOrEdge": "<1-2 sentences; weekly arc or edge case>"
+    "morning": "<2 short sentences; real tools named, real cadence>",
+    "afternoon": "<2 short sentences; what shifts>",
+    "eveningOrEdge": "<1 sentence; weekly arc or edge>"
   },
   "toolsAndArtifacts": [
-    { "name": "<real tool name>", "purpose": "<8 words max>" },
-    ...EXACTLY 6 entries, no more...
+    { "name": "<tool name>", "purpose": "<5-8 words>" },
+    ...EXACTLY 4 entries...
   ],
   "ladder": [
-    { "title": "<e.g. Associate PM>", "yearsExperience": "<e.g. 0-2 yrs>", "compRange": "<e.g. $90-130K>", "whatChanges": "<one short sentence>" },
-    ...EXACTLY 4 rungs from entry to senior/staff...
+    { "title": "<e.g. Associate PM>", "yearsExperience": "<e.g. 0-2 yrs>", "compRange": "<e.g. $90-130K>", "whatChanges": "<short>" },
+    ...EXACTLY 3 rungs from entry to senior...
   ],
   "tradeoffs": {
-    "pros": ["<3 specific pros, short>"],
-    "cons": ["<3 honest cons, short>"]
+    "pros": ["<3 short pros>"],
+    "cons": ["<3 short cons>"]
   },
   "entryPathways": [
-    { "pathway": "<e.g. Lateral from engineering>", "proportion": "<e.g. ~30% or 'common'>", "notes": "<one short sentence>" },
-    ...EXACTLY 3 pathways...
+    { "pathway": "<e.g. Lateral from analyst>", "proportion": "<e.g. common>", "notes": "<short>" },
+    ...EXACTLY 2 pathways...
   ],
   "adjacentCareers": [
-    { "title": "<role title>", "movePattern": "<one short sentence>" },
-    ...EXACTLY 3 entries...
+    { "title": "<title>", "movePattern": "<short>" },
+    ...EXACTLY 2 entries...
   ],
   "whoYouWorkWith": [
-    { "role": "<e.g. Engineering>", "relationship": "<one short sentence>" },
-    ...EXACTLY 4 entries...
+    { "role": "<e.g. Engineering>", "relationship": "<short>" },
+    ...EXACTLY 3 entries...
   ]
 }`;
 
@@ -135,7 +135,7 @@ Return only JSON.`;
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 2000,
+    max_tokens: 1200,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });

@@ -1,5 +1,5 @@
 /**
- * Scholar Agent — SerpAPI Google Scholar (official SDK).
+ * Scholar Agent — SerpAPI Google Scholar (direct fetch).
  *
  * Pulls peer-reviewed papers relevant to the target career so the "About this
  * career" tab includes academic grounding. For research-adjacent careers (UX,
@@ -11,15 +11,15 @@
  *   1. Compose a tight scholar query from the target career name + bridge
  *      topic. We anchor on the literal career phrase so we don't drown in
  *      adjacent fields.
- *   2. Call SerpAPI's google_scholar engine via the official `serpapi` SDK.
+ *   2. Call SerpAPI's google_scholar engine via direct fetch (the official
+ *      `serpapi` SDK pulls Node modules https/querystring/process which
+ *      Convex's default V8 runtime can't bundle, blocking deploys).
  *   3. Filter: drop entries with no citation count or fewer than 5 citations
  *      (Scholar's long tail is a junk yard). Keep top 5.
  *   4. Return shape that the UI can render straight to a list.
  *
  * Cost: SerpAPI is ~$0.01/search. One call per path. Trivial.
  */
-
-import { getJson } from "serpapi";
 
 export interface ScholarPaper {
   title: string;
@@ -98,16 +98,25 @@ export async function runScholarAgent(args: {
   }
 
   const query = buildQuery(args.targetCareer, args.bridgeTopic);
+  const url = new URL("https://serpapi.com/search");
+  url.searchParams.set("engine", "google_scholar");
+  url.searchParams.set("q", query);
+  url.searchParams.set("api_key", apiKey);
+  url.searchParams.set("num", "20");
+  url.searchParams.set("hl", "en");
+  url.searchParams.set("output", "json");
 
   try {
-    const data = (await getJson({
-      engine: "google_scholar",
-      q: query,
-      hl: "en",
-      num: 20,
-      api_key: apiKey,
-    })) as SerpApiScholarResponse;
+    const response = await fetch(url.toString());
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      console.error(
+        `[scholar] SerpAPI HTTP ${response.status}: ${body.slice(0, 200)}`,
+      );
+      return { query, papers: [], available: false };
+    }
 
+    const data = (await response.json()) as SerpApiScholarResponse;
     if (data.error) {
       console.error("[scholar] SerpAPI returned error:", data.error);
       return { query, papers: [], available: false };
