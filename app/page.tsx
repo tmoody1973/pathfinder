@@ -107,9 +107,9 @@ export default function Home() {
         </Card>
 
         <Text as="p" className="mt-8 text-sm text-muted-foreground">
-          Try anything: TikTok influencer, drone pilot, software engineer, prompt
-          engineer, professional dog walker. Careers not in O*NET get mapped to the
-          closest functional equivalent by Claude Haiku.
+          Try anything: TikTok influencer, drone pilot, prompt engineer,
+          professional dog walker. Careers not in O*NET get mapped to the closest
+          functional equivalent by Claude Sonnet 4.6, with reasoning shown.
         </Text>
       </div>
     </main>

@@ -141,8 +141,11 @@ export async function semanticOnetLookup(
   // Layer 3: LLM mapping
   try {
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 200,
+      // Sonnet 4.6, not Haiku — Layer 3 only fires for ambiguous titles (overrides
+      // + 48k alt titles already handle the easy cases), and ambiguous mapping
+      // benefits measurably from Sonnet's extra reasoning. ~$0.003/call, +~1s latency.
+      model: "claude-sonnet-4-6",
+      max_tokens: 400,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: PROMPT_TEMPLATE(query) }],
     });
