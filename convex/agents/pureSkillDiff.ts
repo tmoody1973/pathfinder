@@ -31,6 +31,23 @@ For EACH career, produce two arrays:
 Each entry has: name (specific, modern phrasing), importance (0-100, how central to the role), level (0-100, how deep the mastery needs to go).
 
 CRITICAL CONSISTENCY RULES — you are comparing two careers, not analyzing them in isolation:
+0. Include a socHint for BOTH careers — your best-guess O*NET SOC code. Use canonical modern mappings:
+   - Product Manager (tech) → 11-3021.00
+   - UX/UI/Product Designer → 15-1255.00
+   - Software Engineer / Developer → 15-1252.00
+   - Frontend Developer → 15-1254.00
+   - Data Scientist / ML Engineer / AI Engineer → 15-2051.00
+   - Data Engineer → 15-1243.00
+   - DevOps / SRE / Cloud Engineer → 15-1244.00
+   - Graphic Designer → 27-1024.00
+   - Marketing Manager → 11-2021.00
+   - Project Manager → 13-1082.00
+   - Radio Host / DJ → 27-3011.00
+   - Teacher (K-5) → 25-2021.00
+   - Registered Nurse → 29-1141.00
+   - Accountant → 13-2011.00
+   - Electrician → 47-2111.00
+   For ambiguous titles, pick the MODERN TECH meaning unless the current career clearly suggests otherwise. socHint is used for downstream course/community lookup — it does NOT drive the skill diff itself.
 1. If a competency appears in BOTH careers, score it on the SAME scale. If "Active Listening" is 80 for Radio Host, it should be 70-90 for a PM — do NOT score it 30 for PM just because it's a different field. Consistent scoring across careers is what makes the diff meaningful.
 2. Be specific with names. "Product Management" beats "Business Skills". "Figma" is a TOOL, not a knowledge area — use "User Interface Design" as the knowledge and reference Figma in level context.
 3. 8-12 competencies per career, mix of knowledge (~5-7) and skills (~3-5). More isn't better.
@@ -56,12 +73,14 @@ Return ONLY valid JSON with this exact shape:
   "current": {
     "title": "concise modern label for this career",
     "profileNote": "1 sentence describing the 2026 version of this role",
+    "socHint": "closest O*NET SOC code (e.g. 27-3011.00) — best guess, needed for downstream course/community lookup even if imperfect",
     "knowledge": [{ "name": "...", "importance": 0-100, "level": 0-100 }, ...],
     "skills": [{ "name": "...", "importance": 0-100, "level": 0-100 }, ...]
   },
   "target": {
     "title": "concise modern label",
     "profileNote": "1 sentence describing the 2026 version",
+    "socHint": "closest O*NET SOC code",
     "knowledge": [...],
     "skills": [...]
   },
@@ -123,9 +142,14 @@ function toSemanticLookup(
   rawTitle: string,
   llmTitle: string,
   profileNote: string,
+  socHint: string,
 ): SemanticLookupResult {
+  // Validate SOC format loosely — Claude's hint is used by Course/Community
+  // agents for curated lookup; an invalid format just means those agents fall
+  // through to their LLM paths (which is fine).
+  const socCode = /^\d{2}-\d{4}(\.\d{2})?$/.test(socHint.trim()) ? socHint.trim() : "";
   return {
-    socCode: "", // no SOC in pure-LLM mode
+    socCode,
     title: llmTitle || rawTitle,
     closestMatch: false,
     reasoning: profileNote,
@@ -225,11 +249,13 @@ Produce the full structured analysis per the system prompt. Return only JSON.`;
       currentCareerInput,
       String(current.title ?? currentCareerInput),
       String(current.profileNote ?? ""),
+      String(current.socHint ?? ""),
     ),
     target: toSemanticLookup(
       targetCareerInput,
       String(target.title ?? targetCareerInput),
       String(target.profileNote ?? ""),
+      String(target.socHint ?? ""),
     ),
     diff: {
       gainedKnowledge,

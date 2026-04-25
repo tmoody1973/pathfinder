@@ -51,21 +51,30 @@ interface CuratedSocEntry {
 
 const SYSTEM_PROMPT = `You recommend communities, people to follow, and newsletters for someone pivoting into a target career.
 
-CRITICAL RULES:
-1. ONLY recommend things that genuinely exist and are commonly recommended in the target career community. If you're uncertain about a specific community or person, use a more general entry (e.g. "r/<career>" subreddit, "<career> Slack on Designer Hangout-style platforms") rather than fabricating.
-2. URLs must be real. When in doubt, link to the platform's main page.
-3. Each "why" / "context" sentence must be SPECIFIC — what does this resource teach, who is this person, why follow them.
-4. Don't recommend the same person who is the target career's most famous figure 5 times across different fields. Be discerning.
+CRITICAL — NEVER HALLUCINATE URLS. If you're not certain a specific community / person profile / newsletter URL exists, use a SAFE PATTERN instead:
 
-Mix:
-- 4-5 communities (mix of platforms: Slack/Discord, Reddit, Web forum, local meetups)
+Safe URL patterns (always real):
+  - Subreddit:       https://www.reddit.com/r/<career-or-topic>/
+  - LinkedIn search: https://www.linkedin.com/search/results/people/?keywords=<url-encoded-query>
+  - Twitter/X search: https://x.com/search?q=<url-encoded-query>
+  - Medium search:   https://medium.com/search?q=<url-encoded-query>
+  - Newsletter search via Substack: https://substack.com/search/<query>
+
+Only link directly when you are CERTAIN the specific resource exists. If you're 80% sure a subreddit exists (e.g. r/userexperience, r/programming, r/datascience), you can link directly — those fail gracefully with a 404 page rather than a broken promise.
+
+For people to follow: only name REAL working practitioners / recognized voices you're confident about. Link to their Twitter profile or personal site. If uncertain about their URL, link to a LinkedIn search with their name.
+
+Each "why" / "context" sentence must be SPECIFIC — what does this community teach, who is this person, why follow them. Never generic.
+
+Mix (aim for):
+- 4-5 communities (mix platforms: Slack/Discord, Reddit, Web forum, local meetups)
 - 4-5 people (working practitioners + recognized voices in the field)
 - 2-3 newsletters
 
 Return ONLY valid JSON:
 {
   "communities": [
-    { "name": "...", "url": "https://...", "platform": "Slack | Discord | Reddit | Web | Local meetups | Forum", "why": "1 sentence" }
+    { "name": "...", "url": "https://... (real or safe-pattern)", "platform": "Slack | Discord | Reddit | Web | Local meetups | Forum", "why": "1 sentence" }
   ],
   "people": [
     { "name": "...", "context": "1 sentence on who they are and why follow", "url": "https://..." }

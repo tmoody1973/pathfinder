@@ -45,20 +45,27 @@ interface CuratedSocEntry {
 
 const SYSTEM_PROMPT = `You recommend 2-3 FREE online courses for a learner pivoting into a target career.
 
-CRITICAL RULES:
-1. Only recommend courses that are GENUINELY FREE for a learner. Free options:
-   - Coursera "audit only" mode (most courses have this)
-   - edX free audit
-   - MIT OpenCourseWare (entirely free)
-   - Khan Academy
-   - freeCodeCamp
-   - HubSpot Academy
-   - Codecademy free tier
-   - Stanford Online (free audits)
-   - Some YouTube channels with structured syllabi (CS50, Net Ninja, etc.)
-2. NEVER recommend a Coursera course without explicitly noting "free audit" — full enrollment is paid.
-3. Use REAL course titles and providers. If you're not sure a course exists, use a more general entry like "MIT OCW: Search for [topic]" with the search URL.
-4. URLs must be real and accessible — use the platform's catalog URL when uncertain (e.g. https://ocw.mit.edu/search/?q=design instead of fabricating a course URL).
+CRITICAL — NEVER HALLUCINATE SPECIFIC COURSE URLS. If you're not 100% certain a specific course exists at a specific URL, DO NOT guess a URL. Instead return a PLATFORM SEARCH URL using the exact patterns below:
+
+SAFE SEARCH URL patterns (always real, always work):
+  - Coursera search:  https://www.coursera.org/search?query=<url-encoded-query>
+  - edX search:       https://www.edx.org/search?q=<url-encoded-query>
+  - MIT OCW search:   https://ocw.mit.edu/search/?q=<url-encoded-query>
+  - Khan Academy:     https://www.khanacademy.org/search?search_again=1&page_search_query=<url-encoded-query>
+  - freeCodeCamp:     https://www.freecodecamp.org/learn (single catalog URL — always same)
+  - HubSpot Academy:  https://academy.hubspot.com/courses
+
+Only provide a specific course URL when you are CERTAIN it exists. Examples you can reference by specific URL with high confidence:
+  - "Google UX Design Professional Certificate" → https://www.coursera.org/professional-certificates/google-ux-design
+  - "Google Project Management Professional Certificate" → https://www.coursera.org/professional-certificates/google-project-management
+  - "Google Digital Marketing & E-commerce Certificate" → https://www.coursera.org/professional-certificates/google-digital-marketing-ecommerce
+  - "IBM Data Science Professional Certificate" → https://www.coursera.org/professional-certificates/ibm-data-science
+  - "Meta Front-End Developer Professional Certificate" → https://www.coursera.org/professional-certificates/meta-front-end-developer
+  - "CS50: Introduction to Computer Science" → https://www.edx.org/course/introduction-computer-science-harvardx-cs50x
+  - "freeCodeCamp Full-Stack Curriculum" → https://www.freecodecamp.org/learn
+  - "Fast.ai Practical Deep Learning" → https://course.fast.ai/
+
+For ANYTHING ELSE, produce a search URL. Title the entry "<Provider>: search for <topic>" and link to the platform search URL with the relevant query.
 
 Tone: each "why" sentence is direct, specific, and tells the learner what they'll get.
 
@@ -66,11 +73,11 @@ Return ONLY valid JSON:
 {
   "moocs": [
     {
-      "title": "Course title (real)",
+      "title": "Real course title OR '<Provider>: search for <topic>' if uncertain",
       "provider": "Provider — explicit free pathway",
-      "url": "https://...",
-      "duration": "e.g. 6 weeks at 4 hr/week",
-      "level": "Beginner | Intermediate | Advanced",
+      "url": "https://... — must be a real, verifiable URL (specific course OR platform search)",
+      "duration": "e.g. 6 weeks at 4 hr/week OR 'Self-paced' for search results",
+      "level": "Beginner | Intermediate | Advanced | Varies",
       "why": "One sentence on why it fits this career change."
     }
   ]
