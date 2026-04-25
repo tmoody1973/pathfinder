@@ -17,7 +17,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { onetLookup, type ONetLookupResult } from "./onet";
-import onetData from "./data/onet.json"; // adjust path when you move this file
+import onetData from "../data/onet.json";
 
 export interface SemanticLookupResult extends ONetLookupResult {
   reasoning: string; // why this mapping was chosen (shown in the UI)
@@ -101,23 +101,26 @@ export async function semanticOnetLookup(
       .map((block) => block.text)
       .join("");
 
+    const wrapStatic = (reason: string): SemanticLookupResult | null =>
+      staticResult ? { ...staticResult, reasoning: reason, source: "fuzzy" } : null;
+
     const jsonMatch = text.match(/\{[\s\S]*?\}/);
     if (!jsonMatch) {
       console.error("[semanticOnetLookup] No JSON in LLM response:", text);
-      return staticResult; // fall back to fuzzy match if available
+      return wrapStatic("LLM mapping unavailable — using closest static match.");
     }
 
     const parsed = JSON.parse(jsonMatch[0]);
     if (typeof parsed.socCode !== "string" || typeof parsed.reasoning !== "string") {
       console.error("[semanticOnetLookup] Malformed JSON:", parsed);
-      return staticResult;
+      return wrapStatic("LLM returned malformed mapping — using closest static match.");
     }
 
     // Validate the SOC code actually exists in our data
     const occ = (onetData as Record<string, { title: string }>)[parsed.socCode];
     if (!occ) {
       console.error("[semanticOnetLookup] LLM returned unknown SOC:", parsed.socCode);
-      return staticResult;
+      return wrapStatic("LLM returned unknown occupation code — using closest static match.");
     }
 
     return {

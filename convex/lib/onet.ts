@@ -20,7 +20,7 @@
  *   - computeCareerDiff(curr, target)→ COMBINED skill + knowledge bridge (the demo magic)
  */
 
-import onetData from "./data/onet.json"; // adjust path when you move this file
+import onetData from "../data/onet.json";
 
 // === Types ===
 
