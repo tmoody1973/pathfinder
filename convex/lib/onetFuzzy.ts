@@ -1,7 +1,8 @@
 /**
  * LLM-powered O*NET occupation lookup fallback for unknown career titles.
  *
- * MOVE THIS FILE to: convex/lib/onet-fuzzy.ts (alongside onet.ts)
+ * Convex disallows hyphens in module filenames, so this is `onetFuzzy.ts`
+ * (not `onet-fuzzy.ts`). Located at convex/lib/onetFuzzy.ts.
  *
  * Three-layer lookup strategy:
  *  1. Exact substring match (onet.ts → onetLookup)             — fast, free
