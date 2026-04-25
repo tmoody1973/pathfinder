@@ -288,6 +288,11 @@ function AgentPipeline({ agentRuns, pathStatus }: { agentRuns: any[]; pathStatus
                   <span className="text-xs opacity-70">{elapsed}s</span>
                 )}
               </div>
+              {run.status === "error" && run.errorMessage && (
+                <p className="mt-2 text-[10px] leading-tight font-mono break-words text-destructive whitespace-pre-wrap">
+                  {run.errorMessage}
+                </p>
+              )}
             </div>
           );
         })}

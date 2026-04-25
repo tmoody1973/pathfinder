@@ -30,6 +30,11 @@ import type { Id } from "./_generated/dataModel";
  */
 
 const AGENT_TIMEOUT_MS = 30_000;
+// Skill Diff is the only Opus 4.7 call AND it now produces both the skill
+// profiles + the full 12-module pathOutline (~6000 output tokens). Opus at
+// that scale takes 30-60s. Give it 90s of headroom; the rest of the pipeline
+// fans out in parallel after, so a slower skillDiff doesn't slow the demo.
+const SKILL_DIFF_TIMEOUT_MS = 90_000;
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
@@ -91,7 +96,7 @@ export const run = internalAction({
 
       skillDiff = await withTimeout(
         runPureSkillDiff(anthropic, path.currentCareer, path.targetCareer),
-        AGENT_TIMEOUT_MS,
+        SKILL_DIFF_TIMEOUT_MS,
         "skillDiff",
       );
 
