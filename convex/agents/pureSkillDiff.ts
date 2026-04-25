@@ -219,9 +219,13 @@ TARGET career:  ${targetCareerInput}
 
 Produce the full structured analysis per the system prompt. Return only JSON.`;
 
+  // Output budget: skill profiles (~2000 tok) + pathOutline (4 phases × 3
+  // modules × 6 fields ≈ 3000 tok) + diff arrays + headline + buffer. 8000
+  // gives comfortable headroom; truncation here cascades to all 8 agents
+  // failing because skillDiff gates the whole pipeline.
   const response = await anthropic.messages.create({
     model: "claude-opus-4-7",
-    max_tokens: 4000,
+    max_tokens: 8000,
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
   });
