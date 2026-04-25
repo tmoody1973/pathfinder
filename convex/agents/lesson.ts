@@ -11,6 +11,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { SkillDiffResult } from "./skillDiff";
+import { parseAgentJson } from "../lib/parseJson";
 
 export interface LessonSection {
   heading: string;
@@ -78,9 +79,11 @@ Write the lesson now. Return only JSON.`;
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error(`Lesson Agent: no JSON in response`);
-  const parsed = JSON.parse(jsonMatch[0]);
+
+  const parsed = parseAgentJson<{ intro?: unknown; sections?: unknown }>(
+    text,
+    "Lesson Agent",
+  );
 
   if (typeof parsed.intro !== "string" || !Array.isArray(parsed.sections)) {
     throw new Error("Lesson Agent: malformed JSON shape");

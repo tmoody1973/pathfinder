@@ -17,6 +17,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { semanticOnetLookup, type SemanticLookupResult } from "../lib/onetFuzzy";
 import { computeCareerDiff, type CareerDiff, type ONetCompetency } from "../lib/onet";
+import { parseAgentJson } from "../lib/parseJson";
 
 export interface SkillDiffResult {
   // Resolution outputs (from Phase 1)
@@ -42,18 +43,37 @@ const OPUS_SYSTEM_PROMPT = `You are the Skill Diff Agent for PathFinder, a caree
 You receive a structured "career diff" computed from O*NET data: gained skills, gained knowledge areas, shared competencies, and dropped competencies between a current career and a target career.
 
 Your job:
-1. Pick the SINGLE most demo-worthy "primary bridge" competency the learner needs to develop. Prefer concrete domain knowledge ("Design", "Computers and Electronics", "Programming") over generic meta-skills ("Critical Thinking", "Active Listening") when both are gained, because concrete competencies make a more visceral demo.
-2. Write a 1-2 sentence framing that connects what the learner ALREADY brings to what they need to develop. Reference 1-2 specific competencies they share. Voice: warm, specific, encouraging — like a senior peer who has done this transition.
-3. Decide what topic the bridge module should focus on. The topic should be a phrase like "Visual hierarchy and grid systems for non-designers" or "Translating audience research instincts into UX research methodology" — concrete, not generic.
-4. Pick a Bloom's Taxonomy level for the bridge module. For careers totally outside the learner's experience, start at "Understand" or "Apply". For closer pivots, "Analyze" or "Evaluate" is fair.
-5. Estimate hours for the bridge module: 2-6 hours typical for a single-module bridge.
+
+1. Pick the SINGLE most demo-worthy "primary bridge" competency. RULES OF PRIORITY:
+
+   PREFER GAINED KNOWLEDGE over GAINED SKILLS whenever knowledge gains have importance >= 60. O*NET "Knowledge" represents domain areas (Design, Fine Arts, Communications and Media, Mechanical, Customer Service, Computers and Electronics) which are FAR more concrete and identity-defining than O*NET "Skills" (Programming, Active Listening, Critical Thinking, Reading Comprehension).
+
+   For a UX Designer, "Design" knowledge is the bridge — NOT "Programming" skill. UX Designers design, they don't primarily code.
+   For a Software Engineer, "Programming" skill IS the bridge because there's no equivalent knowledge area.
+   For a Chef, "Food Production" knowledge is the bridge — NOT "Coordination" skill.
+
+   ONLY pick a Skill if there is NO Knowledge gain at importance >= 60.
+
+2. Write a 1-2 sentence framing that:
+   - Names the SPECIFIC SHARED competency the learner already brings (e.g. "your comfort with Communications and Media", "your existing Active Listening")
+   - Names what's NEW for them (the primary bridge)
+   - Connects them with a concrete metaphor or "you already X, now you'll Y" sentence
+   - Voice: senior peer who's done this pivot, specific and grounded
+   - DO NOT use generic phrasing like "developer's mindset" if the target isn't a developer
+   - DO NOT use the word "code" if the target isn't a coding role
+
+3. Module topic: a CONCRETE phrase like "Visual hierarchy and grid systems for non-designers" or "Color theory and accessibility contrast ratios" — specific to the bridge competency for the target career, not generic.
+
+4. Bloom level: "Understand" or "Apply" for big career jumps, "Analyze" or "Evaluate" for closer pivots.
+
+5. Estimated hours: 2-6.
 
 Return ONLY valid JSON with this shape:
 {
-  "primaryBridgeElementId": "<elementId from the gained competencies>",
+  "primaryBridgeElementId": "<elementId from gained KNOWLEDGE first, then gained skills if no knowledge>",
   "primaryBridgeType": "knowledge" | "skill",
-  "framing": "<1-2 sentences>",
-  "moduleTopic": "<concrete topic phrase>",
+  "framing": "<1-2 sentences, specific to BOTH careers, accurate to the target's actual work>",
+  "moduleTopic": "<concrete topic phrase tied to the primary bridge competency>",
   "bloomLevel": "Remember" | "Understand" | "Apply" | "Analyze" | "Evaluate" | "Create",
   "estimatedHours": <number 2-6>
 }`;
@@ -127,11 +147,14 @@ export async function runSkillDiffAgent(
     .map((b) => b.text)
     .join("");
 
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    throw new Error(`Opus response had no JSON: ${text.slice(0, 200)}`);
-  }
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = parseAgentJson<{
+    primaryBridgeElementId?: string;
+    primaryBridgeType?: "knowledge" | "skill";
+    framing?: string;
+    moduleTopic?: string;
+    bloomLevel?: SkillDiffResult["headline"]["bloomLevel"];
+    estimatedHours?: number;
+  }>(text, "Skill Diff Agent");
 
   // Locate the primary bridge competency by elementId from the gained arrays
   const allGained = [...diff.gainedKnowledge, ...diff.gainedSkills];

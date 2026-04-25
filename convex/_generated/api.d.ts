@@ -15,6 +15,7 @@ import type * as agents_resource from "../agents/resource.js";
 import type * as agents_skillDiff from "../agents/skillDiff.js";
 import type * as lib_onet from "../lib/onet.js";
 import type * as lib_onetFuzzy from "../lib/onetFuzzy.js";
+import type * as lib_parseJson from "../lib/parseJson.js";
 import type * as lib_youtube from "../lib/youtube.js";
 import type * as modules from "../modules.js";
 import type * as orchestrate from "../orchestrate.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   "agents/skillDiff": typeof agents_skillDiff;
   "lib/onet": typeof lib_onet;
   "lib/onetFuzzy": typeof lib_onetFuzzy;
+  "lib/parseJson": typeof lib_parseJson;
   "lib/youtube": typeof lib_youtube;
   modules: typeof modules;
   orchestrate: typeof orchestrate;

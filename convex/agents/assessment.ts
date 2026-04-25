@@ -10,6 +10,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import type { SkillDiffResult } from "./skillDiff";
+import { parseAgentJson } from "../lib/parseJson";
 
 export interface QuizQuestion {
   q: string;
@@ -90,13 +91,16 @@ Return only JSON.`;
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Assessment Agent: no JSON in response");
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = parseAgentJson<{ quiz?: unknown[]; project?: Record<string, unknown> }>(
+    text,
+    "Assessment Agent",
+  );
 
-  if (!Array.isArray(parsed.quiz) || typeof parsed.project !== "object") {
+  if (!Array.isArray(parsed.quiz) || typeof parsed.project !== "object" || parsed.project === null) {
     throw new Error("Assessment Agent: malformed JSON shape");
   }
+
+  const project = parsed.project;
 
   return {
     quiz: parsed.quiz.map((q: any) => ({
@@ -106,17 +110,17 @@ Return only JSON.`;
       explanation: String(q.explanation ?? ""),
     })),
     project: {
-      title: String(parsed.project.title ?? ""),
-      brief: String(parsed.project.brief ?? ""),
-      deliverables: Array.isArray(parsed.project.deliverables)
-        ? parsed.project.deliverables.map((d: unknown) => String(d))
+      title: String(project.title ?? ""),
+      brief: String(project.brief ?? ""),
+      deliverables: Array.isArray(project.deliverables)
+        ? project.deliverables.map((d: unknown) => String(d))
         : [],
-      skillsDemonstrated: Array.isArray(parsed.project.skillsDemonstrated)
-        ? parsed.project.skillsDemonstrated.map((s: unknown) => String(s))
+      skillsDemonstrated: Array.isArray(project.skillsDemonstrated)
+        ? project.skillsDemonstrated.map((s: unknown) => String(s))
         : [],
       estimatedHours:
-        typeof parsed.project.estimatedHours === "number" ? parsed.project.estimatedHours : 4,
-      isPortfolioArtifact: parsed.project.isPortfolioArtifact !== false,
+        typeof project.estimatedHours === "number" ? project.estimatedHours : 4,
+      isPortfolioArtifact: project.isPortfolioArtifact !== false,
     },
   };
 }

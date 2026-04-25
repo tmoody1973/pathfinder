@@ -19,6 +19,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { onetLookup, type ONetLookupResult } from "./onet";
 import onetData from "../data/onet.json";
+import { parseAgentJson } from "./parseJson";
 
 export interface SemanticLookupResult extends ONetLookupResult {
   reasoning: string; // why this mapping was chosen (shown in the UI)
@@ -35,25 +36,40 @@ const TITLE_LIST = Object.entries(onetData as Record<string, { title: string }>)
 
 const SYSTEM_PROMPT = `You map free-text career titles to O*NET SOC codes.
 
-You will be given a career query (e.g. "TikTok influencer", "drone pilot", "vibe coder")
-and a numbered list of all 923 O*NET occupations. Your job is to pick the SINGLE
-occupation that most closely matches the FUNCTIONAL work the queried career does.
+You will be given a career query (e.g. "TikTok influencer", "UX designer", "drone pilot")
+and a list of all 894 O*NET occupations. Your job is to pick the SINGLE occupation
+that most closely matches the FUNCTIONAL work the queried career does.
 
-Examples of good mappings:
-  - "TikTok influencer"     → 27-3031.00 Public Relations Specialists (audience engagement, brand promotion)
+CRITICAL: Be precise about the difference between adjacent fields. UX/UI design,
+product design, graphic design, and software development are DIFFERENT occupations
+in O*NET. A "UX Designer" designs user experience and interaction — that's Web
+and Digital Interface Designers (15-1255.00), NOT Software Developers (15-1252.00),
+even though both work with computers. A "Frontend Developer" who writes code is
+Software Developers. A "Product Manager" is not either of those.
+
+Examples of correct mappings:
+  - "UX designer"           → 15-1255.00 Web and Digital Interface Designers (designs interaction, NOT writes code)
+  - "UI designer"           → 15-1255.00 Web and Digital Interface Designers
+  - "Product designer"      → 15-1255.00 Web and Digital Interface Designers
+  - "UX researcher"         → 19-3041.00 Sociologists (studies user behavior systematically) OR 15-1255.00
+  - "Frontend developer"    → 15-1254.00 Web Developers
+  - "Software engineer"     → 15-1252.00 Software Developers
   - "Vibe coder"            → 15-1252.00 Software Developers (writes software, AI-assisted)
+  - "Graphic designer"      → 27-1024.00 Graphic Designers (visual identity, NOT digital interaction)
+  - "Product manager"       → 11-9111.00 Medical and Health Services Managers — NO, use 11-3021.00 Computer and Information Systems Managers if tech, else 11-2021.00 Marketing Managers
+  - "TikTok influencer"     → 27-3031.00 Public Relations Specialists (audience engagement, brand promotion)
   - "Drone pilot"           → 53-2012.00 Commercial Pilots (operates an aircraft for hire)
   - "VTuber"                → 27-2011.00 Actors (performs in character for an audience)
   - "Professional dog walker" → 39-2021.00 Animal Caretakers (cares for animals)
 
 Return ONLY valid JSON with this exact shape:
-  { "socCode": "27-3031.00", "reasoning": "one sentence explaining the functional match" }
+  { "socCode": "15-1255.00", "reasoning": "one sentence explaining the functional match" }
 
-The reasoning will be shown to a user, so make it crisp and specific. Mention the
-shared work activities, not the surface job title.
+The reasoning will be shown to a user. Make it crisp, specific, and accurate to
+the actual job duties — not the buzzword in the title.
 
 If the query is nonsense or has no plausible match, pick the closest possible
-occupation and explain that it's a loose match in the reasoning.`;
+occupation and say it's a loose match in the reasoning.`;
 
 const PROMPT_TEMPLATE = (query: string) =>
   `Career query: "${query}"
@@ -105,13 +121,17 @@ export async function semanticOnetLookup(
     const wrapStatic = (reason: string): SemanticLookupResult | null =>
       staticResult ? { ...staticResult, reasoning: reason, source: "fuzzy" } : null;
 
-    const jsonMatch = text.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) {
-      console.error("[semanticOnetLookup] No JSON in LLM response:", text);
+    let parsed: { socCode?: unknown; reasoning?: unknown };
+    try {
+      parsed = parseAgentJson<{ socCode?: unknown; reasoning?: unknown }>(
+        text,
+        "semanticOnetLookup",
+      );
+    } catch (err) {
+      console.error("[semanticOnetLookup] JSON parse failed:", err);
       return wrapStatic("LLM mapping unavailable — using closest static match.");
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
     if (typeof parsed.socCode !== "string" || typeof parsed.reasoning !== "string") {
       console.error("[semanticOnetLookup] Malformed JSON:", parsed);
       return wrapStatic("LLM returned malformed mapping — using closest static match.");

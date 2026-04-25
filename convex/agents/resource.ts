@@ -12,6 +12,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { SkillDiffResult } from "./skillDiff";
 import { searchAndRankVideos, type RankedYouTubeVideo } from "../lib/youtube";
+import { parseAgentJson } from "../lib/parseJson";
 
 export interface ResourceResult {
   queries: string[];
@@ -52,9 +53,7 @@ Return only JSON.`;
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Resource Agent: no JSON in response");
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = parseAgentJson<{ queries?: unknown }>(text, "Resource Agent");
 
   const queries: string[] = Array.isArray(parsed.queries)
     ? parsed.queries.map((q: unknown) => String(q)).filter((q: string) => q.length > 0).slice(0, 3)

@@ -64,8 +64,8 @@ export default defineSchema({
 
   modules: defineTable({
     pathId: v.id("paths"),
-    careerDiff: v.any(), // gainedSkills, gainedKnowledge, primaryBridge, etc.
-    lesson: v.optional(v.string()),
+    careerDiff: v.any(),                 // SkillDiffResult: current, target, diff, headline
+    lesson: v.optional(v.any()),         // LessonResult: { intro, sections: [...] }
     videos: v.optional(v.array(v.any())),
     audioUrl: v.optional(v.string()),
     quiz: v.optional(v.array(v.any())),
